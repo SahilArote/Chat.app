@@ -3,16 +3,28 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const { createServer } = require('http');
+const path = require('path');
 
 const connectDB = require('./config/db');
-const config = require('../config');
+const config = require('./config');
 const errorHandler = require('./middlewares/errorHandler');
+const { initSocket } = require('./socket');
 
 const app = express();
-const httpServer = createServer(app); // socket.io ke liye http server chahiye
+const httpServer = createServer(app);
 
 // DB connect
 connectDB();
+
+// Models register
+require('./models/User');
+require('./models/Message');
+require('./models/Conversation');
+require('./models/Notification');
+
+// Static files
+app.use(express.static(path.join(__dirname, '../public')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Middleware
 app.use(helmet());
@@ -24,26 +36,32 @@ if (config.nodeEnv === 'development') {
     app.use(morgan('dev'));
 }
 
-// Health check — deploy ke baad check karne ke liye
+// Socket initialize
+const io = initSocket(httpServer);
+app.set('io', io);
+
+// Health check
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', message: 'Chat API is running' });
 });
 
-// Routes — abhi placeholder, baad mein add karenge
+// Routes
 app.use('/api/auth', require('./routes/auth'));
-
+app.use('/api/users', require('./routes/user'));
+app.use('/api/conversations', require('./routes/conversation'));
+app.use('/api/messages', require('./routes/message'));
+app.use('/api/upload', require('./routes/upload'));
 // 404 handler
-app.use('*', (req, res) => {
+app.use((req, res) => {
     res.status(404).json({ error: `Route ${req.originalUrl} not found` });
 });
 
-// Global error handler — sabse last mein
+// Global error handler
 app.use(errorHandler);
 
 // Server start
 httpServer.listen(config.port, () => {
     console.log(`Server running in ${config.nodeEnv} mode on port ${config.port}`);
 });
-
 
 module.exports = { app, httpServer };

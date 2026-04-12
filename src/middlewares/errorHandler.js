@@ -1,4 +1,4 @@
-const config = require('./config');
+const config = require('../config');
 
 const errorHandler = (err, req, res, next) => {
     let statusCode = err.statusCode || 500;

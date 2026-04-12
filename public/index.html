@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- AUTH SCREEN -->
+    <div id="auth-screen" class="screen">
+        <div class="auth-box">
+            <h1 class="logo">💬 ChatApp</h1>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('login')">Login</button>
+                <button class="tab" onclick="switchTab('register')">Register</button>
+            </div>
+
+            <!-- Login Form -->
+            <div id="login-form">
+                <input type="email" id="login-email" placeholder="Email" />
+                <input type="password" id="login-password" placeholder="Password" />
+                <button class="btn-primary" onclick="login()">Login</button>
+            </div>
+
+            <!-- Register Form -->
+            <div id="register-form" style="display:none">
+                <input type="text" id="reg-username" placeholder="Username" />
+                <input type="email" id="reg-email" placeholder="Email" />
+                <input type="password" id="reg-password" placeholder="Password" />
+                <button class="btn-primary" onclick="register()">Create Account</button>
+            </div>
+
+            <p id="auth-error" class="error"></p>
+        </div>
+    </div>
+
+    <!-- CHAT SCREEN -->
+    <div id="chat-screen" class="screen" style="display:none">
+        <div class="sidebar">
+            <!-- User Profile -->
+            <div class="my-profile">
+                <div class="avatar" id="my-avatar">S</div>
+                <div class="my-info">
+                    <p id="my-username">Sahil</p>
+                    <span class="online-dot"></span>
+                    <span style="font-size:12px;color:#aaa">online</span>
+                </div>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+
+            <!-- Search -->
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Search users..." oninput="searchUsers(this.value)" />
+            </div>
+
+            <!-- Search Results -->
+            <div id="search-results"></div>
+
+            <!-- Chats List -->
+            <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;padding-right:12px">
+                Chats
+                <button onclick="showCreateGroup()" style="background:transparent;border:1px solid #2a2a2a;color:#aaa;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px">+ Group</button>
+            </div>
+            <div id="chats-list"></div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-area">
+            <div id="empty-state" class="empty-state">
+                <p>💬</p>
+                <p>Select a chat to start messaging</p>
+            </div>
+
+            <!-- Active Chat -->
+            <div id="active-chat" style="display:none">
+                <!-- Chat Header -->
+                <div class="chat-header">
+                    <div class="avatar" id="chat-avatar">A</div>
+                    <div>
+                        <p id="chat-name">Username</p>
+                        <span id="chat-status" style="font-size:12px;color:#aaa">offline</span>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div id="messages-container" class="messages-container"></div>
+
+                <!-- Input -->
+                <div class="upload-progress" id="upload-progress">
+                    Uploading...
+                </div>
+
+                <!-- Input -->
+                <div class="message-input-area">
+                    <!-- Hidden file input -->
+                    <input type="file" id="file-input" accept="image/*,video/*,.pdf,.doc,.docx" style="display:none" onchange="handleFileUpload(this)" />
+                    
+                    <!-- Attachment button -->
+                    <button class="btn-attach" onclick="document.getElementById('file-input').click()">
+                        📎
+                    </button>
+
+                    <input type="text" id="message-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendMessage()" />
+                    <button class="btn-send" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Group Create Modal -->
+<div id="group-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center">
+    <div style="background:#1a1a1a;border-radius:16px;padding:24px;width:320px;border:1px solid #2a2a2a">
+        <h3 style="margin-bottom:16px;font-size:16px">Create Group</h3>
+
+        <input type="text" id="group-name" placeholder="Group name..." style="margin-bottom:12px" />
+
+        <input type="text" id="group-search" placeholder="Search users to add..." oninput="searchGroupUsers(this.value)" style="margin-bottom:8px" />
+
+        <!-- Search results -->
+        <div id="group-search-results" style="max-height:150px;overflow-y:auto;margin-bottom:12px"></div>
+
+        <!-- Selected members -->
+        <div id="selected-members" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;min-height:32px"></div>
+
+        <div style="display:flex;gap:8px">
+            <button onclick="hideCreateGroup()" style="flex:1;padding:10px;background:transparent;border:1px solid #2a2a2a;color:#aaa;border-radius:8px;cursor:pointer">Cancel</button>
+            <button onclick="createGroup()" style="flex:1;padding:10px;background:#7c3aed;border:none;color:#fff;border-radius:8px;cursor:pointer">Create</button>
+        </div>
+
+        <p id="group-error" style="color:#f87171;font-size:12px;margin-top:8px;text-align:center"></p>
+    </div>
+</div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
