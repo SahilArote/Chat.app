@@ -25,7 +25,11 @@ window.onload = async () => {
 
 // ─── SOCKET CONNECT ────────────────────────────────────
 function connectSocket() {
-    socket = io('http://localhost:3000', {
+    const socketURL = window.location.hostname === 'localhost'
+    ? 'http://localhost:3000'
+    : window.location.origin;
+
+    socket = io(socketURL, {
         auth: { token }
     });
 
