@@ -2,137 +2,195 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Pulse — Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <!-- AUTH SCREEN -->
     <div id="auth-screen" class="screen">
-        <div class="auth-box">
-            <h1 class="logo">💬 ChatApp</h1>
-
-            <!-- Tabs -->
-            <div class="tabs">
-                <button class="tab active" onclick="switchTab('login')">Login</button>
-                <button class="tab" onclick="switchTab('register')">Register</button>
+        <div class="auth-bg">
+            <div class="auth-orb orb1"></div>
+            <div class="auth-orb orb2"></div>
+            <div class="auth-orb orb3"></div>
+        </div>
+        <div class="auth-container">
+            <div class="auth-logo">
+                <div class="logo-icon">
+                    <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
+                        <path d="M4 6C4 4.9 4.9 4 6 4H22C23.1 4 24 4.9 24 6V18C24 19.1 23.1 20 22 20H8L4 24V6Z" fill="white"/>
+                    </svg>
+                </div>
+                <span class="logo-text">Pulse</span>
             </div>
+            <p class="auth-tagline">Messages that matter</p>
 
-            <!-- Login Form -->
-            <div id="login-form">
-                <input type="email" id="login-email" placeholder="Email" />
-                <input type="password" id="login-password" placeholder="Password" />
-                <button class="btn-primary" onclick="login()">Login</button>
+            <div class="auth-card">
+                <div class="auth-tabs">
+                    <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign in</button>
+                    <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Register</button>
+                    <div class="tab-indicator" id="tab-indicator"></div>
+                </div>
+
+                <div id="login-form" class="auth-form">
+                    <div class="input-group">
+                        <label>Email</label>
+                        <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email"/>
+                    </div>
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password"/>
+                    </div>
+                    <button class="btn-auth" onclick="login()">
+                        <span>Sign in</span>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8H13M9 4L13 8L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                </div>
+
+                <div id="register-form" class="auth-form" style="display:none">
+                    <div class="input-group">
+                        <label>Username</label>
+                        <input type="text" id="reg-username" placeholder="coolname" autocomplete="username"/>
+                    </div>
+                    <div class="input-group">
+                        <label>Email</label>
+                        <input type="email" id="reg-email" placeholder="you@example.com" autocomplete="email"/>
+                    </div>
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" id="reg-password" placeholder="Min 6 characters" autocomplete="new-password"/>
+                    </div>
+                    <button class="btn-auth" onclick="register()">
+                        <span>Create account</span>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8H13M9 4L13 8L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                </div>
+
+                <p id="auth-error" class="auth-error"></p>
             </div>
-
-            <!-- Register Form -->
-            <div id="register-form" style="display:none">
-                <input type="text" id="reg-username" placeholder="Username" />
-                <input type="email" id="reg-email" placeholder="Email" />
-                <input type="password" id="reg-password" placeholder="Password" />
-                <button class="btn-primary" onclick="register()">Create Account</button>
-            </div>
-
-            <p id="auth-error" class="error"></p>
         </div>
     </div>
 
     <!-- CHAT SCREEN -->
-    <div id="chat-screen" class="screen" style="display:none">
-        <div class="sidebar">
-            <!-- User Profile -->
-            <div class="my-profile">
-                <div class="avatar" id="my-avatar">S</div>
-                <div class="my-info">
-                    <p id="my-username">Sahil</p>
-                    <span class="online-dot"></span>
-                    <span style="font-size:12px;color:#aaa">online</span>
-                </div>
-                <button class="btn-logout" onclick="logout()">Logout</button>
-            </div>
+    <div id="chat-screen" class="screen chat-layout" style="display:none">
 
-            <!-- Search -->
-            <div class="search-box">
-                <input type="text" id="search-input" placeholder="Search users..." oninput="searchUsers(this.value)" />
-            </div>
-
-            <!-- Search Results -->
-            <div id="search-results"></div>
-
-            <!-- Chats List -->
-            <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;padding-right:12px">
-                Chats
-                <button onclick="showCreateGroup()" style="background:transparent;border:1px solid #2a2a2a;color:#aaa;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px">+ Group</button>
-            </div>
-            <div id="chats-list"></div>
-        </div>
-
-        <!-- Chat Area -->
-        <div class="chat-area">
-            <div id="empty-state" class="empty-state">
-                <p>💬</p>
-                <p>Select a chat to start messaging</p>
-            </div>
-
-            <!-- Active Chat -->
-            <div id="active-chat" style="display:none">
-                <!-- Chat Header -->
-                <div class="chat-header">
-                    <div class="avatar" id="chat-avatar">A</div>
-                    <div>
-                        <p id="chat-name">Username</p>
-                        <span id="chat-status" style="font-size:12px;color:#aaa">offline</span>
+        <!-- SIDEBAR -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="user-profile">
+                    <div class="user-avatar" id="my-avatar">S</div>
+                    <div class="user-info">
+                        <span class="user-name" id="my-username">Sahil</span>
+                        <span class="user-status-text">
+                            <span class="status-dot"></span>
+                            online
+                        </span>
                     </div>
                 </div>
+                <button class="icon-btn danger" onclick="logout()" title="Logout">
+                    <svg width="17" height="17" viewBox="0 0 18 18" fill="none"><path d="M6.5 9H15M12 5.5L15.5 9L12 12.5M9 3H4C3.4 3 3 3.4 3 4V14C3 14.6 3.4 15 4 15H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+            </div>
 
-                <!-- Messages -->
-                <div id="messages-container" class="messages-container"></div>
+            <div class="sidebar-search">
+                <div class="search-wrap">
+                    <svg width="14" height="14" viewBox="0 0 15 15" fill="none" class="search-icon"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.3"/><path d="M10 10L13 13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                    <input type="text" id="search-input" placeholder="Search people..." oninput="searchUsers(this.value)"/>
+                </div>
+            </div>
 
-                <!-- Input -->
-                <div class="upload-progress" id="upload-progress">
-                    Uploading...
+            <div id="search-results" class="search-results"></div>
+
+            <div class="chats-header">
+                <span class="chats-label">Conversations</span>
+                <button class="new-group-btn" onclick="showCreateGroup()">
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M7 2V12M2 7H12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    Group
+                </button>
+            </div>
+
+            <div id="chats-list" class="chats-list"></div>
+        </div>
+
+        <!-- CHAT AREA -->
+        <div class="chat-area" id="chat-area">
+            <div id="empty-state" class="empty-state">
+                <div class="empty-icon">
+                    <svg width="40" height="40" viewBox="0 0 48 48" fill="none"><path d="M8 10C8 7.8 9.8 6 12 6H36C38.2 6 40 7.8 40 10V30C40 32.2 38.2 34 36 34H14L8 40V10Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M16 18H32M16 24H26" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </div>
+                <h3>Start a conversation</h3>
+                <p>Search someone above or tap a chat</p>
+                <button class="btn-back-mobile" onclick="openSidebar()">← Back to chats</button>
+            </div>
+
+            <div id="active-chat" style="display:none;flex-direction:column;height:100%">
+                <div class="chat-header">
+                    <button class="back-btn" onclick="openSidebar()">
+                        <svg width="20" height="20" viewBox="0 0 18 18" fill="none"><path d="M11 4L6 9L11 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <div class="chat-av" id="chat-avatar">A</div>
+                    <div class="chat-header-info">
+                        <span class="chat-hname" id="chat-name">Username</span>
+                        <span class="chat-hstatus" id="chat-status">offline</span>
+                    </div>
+                    <button class="icon-btn">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="4.5" r="1.2" fill="currentColor"/><circle cx="9" cy="9" r="1.2" fill="currentColor"/><circle cx="9" cy="13.5" r="1.2" fill="currentColor"/></svg>
+                    </button>
                 </div>
 
-                <!-- Input -->
-                <div class="message-input-area">
-                    <!-- Hidden file input -->
-                    <input type="file" id="file-input" accept="image/*,video/*,.pdf,.doc,.docx" style="display:none" onchange="handleFileUpload(this)" />
-                    
-                    <!-- Attachment button -->
-                    <button class="btn-attach" onclick="document.getElementById('file-input').click()">
-                        📎
-                    </button>
+                <div id="messages-container" class="messages-container"></div>
 
-                    <input type="text" id="message-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendMessage()" />
-                    <button class="btn-send" onclick="sendMessage()">Send</button>
+                <div class="upload-bar" id="upload-progress">
+                    <div class="upload-shimmer"></div>
+                    <span id="upload-progress-text">Uploading...</span>
+                </div>
+
+                <div class="input-area">
+                    <input type="file" id="file-input" accept="image/*,video/*,.pdf,.doc,.docx" style="display:none" onchange="handleFileUpload(this)"/>
+                    <button class="attach-btn" onclick="document.getElementById('file-input').click()">
+                        <svg width="17" height="17" viewBox="0 0 18 18" fill="none"><path d="M14.5 8.5L8 15C6.3 16.7 3.5 16.7 1.8 15C0.1 13.3 0.1 10.5 1.8 8.8L8.8 1.8C9.9 0.7 11.7 0.7 12.8 1.8C13.9 2.9 13.9 4.7 12.8 5.8L6.1 12.5C5.6 13 4.8 13 4.3 12.5C3.8 12 3.8 11.2 4.3 10.7L10.3 4.7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <input type="text" id="message-input" placeholder="Type something..." onkeydown="if(event.key==='Enter') sendMessage()"/>
+                    <button class="send-btn" onclick="sendMessage()">
+                        <svg width="17" height="17" viewBox="0 0 18 18" fill="none"><path d="M15.5 2.5L8 10M15.5 2.5L10.5 15.5L8 10L2.5 7.5L15.5 2.5Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
                 </div>
             </div>
         </div>
     </div>
-    <!-- Group Create Modal -->
-<div id="group-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center">
-    <div style="background:#1a1a1a;border-radius:16px;padding:24px;width:320px;border:1px solid #2a2a2a">
-        <h3 style="margin-bottom:16px;font-size:16px">Create Group</h3>
 
-        <input type="text" id="group-name" placeholder="Group name..." style="margin-bottom:12px" />
-
-        <input type="text" id="group-search" placeholder="Search users to add..." oninput="searchGroupUsers(this.value)" style="margin-bottom:8px" />
-
-        <!-- Search results -->
-        <div id="group-search-results" style="max-height:150px;overflow-y:auto;margin-bottom:12px"></div>
-
-        <!-- Selected members -->
-        <div id="selected-members" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;min-height:32px"></div>
-
-        <div style="display:flex;gap:8px">
-            <button onclick="hideCreateGroup()" style="flex:1;padding:10px;background:transparent;border:1px solid #2a2a2a;color:#aaa;border-radius:8px;cursor:pointer">Cancel</button>
-            <button onclick="createGroup()" style="flex:1;padding:10px;background:#7c3aed;border:none;color:#fff;border-radius:8px;cursor:pointer">Create</button>
+    <!-- GROUP MODAL -->
+    <div id="group-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)hideCreateGroup()">
+        <div class="modal-card">
+            <div class="modal-top">
+                <h3>New group</h3>
+                <button class="icon-btn" onclick="hideCreateGroup()">
+                    <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M4 4L14 14M14 4L4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+            <div class="input-group">
+                <label>Group name</label>
+                <input type="text" id="group-name" placeholder="e.g. Squad, Team..."/>
+            </div>
+            <div class="input-group">
+                <label>Add members</label>
+                <input type="text" id="group-search" placeholder="Search..." oninput="searchGroupUsers(this.value)"/>
+            </div>
+            <div id="group-search-results" class="g-results"></div>
+            <div id="selected-members" class="selected-chips"></div>
+            <p id="group-error" class="auth-error"></p>
+            <div class="modal-btns">
+                <button class="btn-secondary" onclick="hideCreateGroup()">Cancel</button>
+                <button class="btn-auth small" onclick="createGroup()">
+                    <span>Create</span>
+                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 7H12M8 3L12 7L8 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+            </div>
         </div>
-
-        <p id="group-error" style="color:#f87171;font-size:12px;margin-top:8px;text-align:center"></p>
     </div>
-</div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="app.js"></script>
