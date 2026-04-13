@@ -111,6 +111,9 @@ async function loadConversations() {
         const data = await res.json();
         if (!res.ok) return;
         renderConversations(data.conversations);
+        if (data.conversations.length > 0) {
+            openChat(data.conversations[0]);
+        }
     } catch {}
 }
 
