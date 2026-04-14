@@ -273,6 +273,161 @@ function showChatScreen() { document.getElementById('auth-screen').style.display
 function updateMyProfile() { if (!currentUser) return; document.getElementById('my-username').textContent = currentUser.username; document.getElementById('my-avatar').textContent = currentUser.username[0].toUpperCase(); }
 function showError(msg) { document.getElementById('auth-error').textContent = msg; }
 
+// ─── OTP ───────────────────────────────────────────────
+let otpEmail = null;
+let resendTimer = null;
+
+function showOTPScreen(email) {
+    otpEmail = email;
+    document.getElementById('otp-email-display').textContent = email;
+
+    // Saari forms hide karo
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('register-form').style.display = 'none';
+    document.getElementById('otp-form').style.display = 'flex';
+
+    // Tabs hide karo
+    document.querySelector('.auth-tabs').style.display = 'none';
+
+    // Error clear karo
+    document.getElementById('auth-error').textContent = '';
+
+    // Pehle box focus karo
+    setTimeout(() => document.getElementById('otp-0').focus(), 100);
+
+    // Resend timer start karo — 30 seconds
+    startResendTimer();
+}
+
+function startResendTimer() {
+    const btn = document.getElementById('resend-btn');
+    let seconds = 30;
+    btn.disabled = true;
+    btn.textContent = `Resend in ${seconds}s`;
+
+    resendTimer = setInterval(() => {
+        seconds--;
+        btn.textContent = `Resend in ${seconds}s`;
+        if (seconds <= 0) {
+            clearInterval(resendTimer);
+            btn.disabled = false;
+            btn.textContent = 'Resend OTP';
+        }
+    }, 1000);
+}
+
+function otpInput(index) {
+    const input = document.getElementById(`otp-${index}`);
+    const val = input.value;
+
+    // Sirf number allow karo
+    input.value = val.replace(/[^0-9]/g, '');
+
+    if (input.value) {
+        input.classList.add('filled');
+        // Next box pe jao
+        if (index < 5) {
+            document.getElementById(`otp-${index + 1}`).focus();
+        } else {
+            // Sab fill ho gaye — auto verify
+            verifyOTP();
+        }
+    } else {
+        input.classList.remove('filled');
+    }
+}
+
+function otpKeyDown(event, index) {
+    // Backspace pe previous box pe jao
+    if (event.key === 'Backspace' && !document.getElementById(`otp-${index}`).value && index > 0) {
+        document.getElementById(`otp-${index - 1}`).focus();
+    }
+    // Paste handle karo
+    if (event.key === 'v' && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        navigator.clipboard.readText().then(text => {
+            const digits = text.replace(/[^0-9]/g, '').slice(0, 6);
+            digits.split('').forEach((d, i) => {
+                const el = document.getElementById(`otp-${i}`);
+                if (el) { el.value = d; el.classList.add('filled'); }
+            });
+            if (digits.length === 6) verifyOTP();
+            else document.getElementById(`otp-${digits.length}`).focus();
+        });
+    }
+}
+
+function getOTPValue() {
+    return Array.from({ length: 6 }, (_, i) => document.getElementById(`otp-${i}`).value).join('');
+}
+
+function clearOTPInputs() {
+    for (let i = 0; i < 6; i++) {
+        const el = document.getElementById(`otp-${i}`);
+        el.value = '';
+        el.classList.remove('filled');
+    }
+    document.getElementById('otp-0').focus();
+}
+
+async function verifyOTP() {
+    const otp = getOTPValue();
+    if (otp.length !== 6) {
+        showError('Enter complete 6-digit OTP');
+        return;
+    }
+
+    const btn = document.querySelector('#otp-form .btn-auth');
+    btn.disabled = true;
+    btn.querySelector('span').textContent = 'Verifying...';
+
+    try {
+        const res = await fetch(`${API}/auth/verify-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: otpEmail, otp })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            showError(data.error);
+            clearOTPInputs();
+            btn.disabled = false;
+            btn.querySelector('span').textContent = 'Verify & Continue';
+            return;
+        }
+
+        // Success — login!
+        token = data.token;
+        localStorage.setItem('token', token);
+        currentUser = data.user;
+        document.querySelector('.auth-tabs').style.display = 'flex';
+        showChatScreen();
+        connectSocket();
+        loadConversations();
+
+    } catch {
+        showError('Something went wrong');
+        btn.disabled = false;
+        btn.querySelector('span').textContent = 'Verify & Continue';
+    }
+}
+
+async function resendOTP() {
+    try {
+        const res = await fetch(`${API}/auth/resend-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: otpEmail })
+        });
+        const data = await res.json();
+        if (!res.ok) { showError(data.error); return; }
+        showError('');
+        clearOTPInputs();
+        startResendTimer();
+    } catch { showError('Failed to resend OTP'); }
+}
+
 async function handleFileUpload(input) {
     const file = input.files[0];
     if (!file) return;

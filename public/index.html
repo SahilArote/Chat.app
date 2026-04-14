@@ -68,6 +68,36 @@
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8H13M9 4L13 8L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </button>
                 </div>
+                <!-- OTP Verification Screen -->
+                    <div id="otp-form" class="auth-form" style="display:none">
+                        <div style="text-align:center;margin-bottom:8px">
+                            <div style="font-size:40px">📧</div>
+                            <p style="font-size:14px;color:var(--text2);margin-top:8px">OTP sent to <strong id="otp-email-display" style="color:var(--text1)"></strong></p>
+                            <p style="font-size:12px;color:var(--text3);margin-top:4px">Expires in 10 minutes</p>
+                        </div>
+
+                        <div class="otp-inputs">
+                            <input type="text" class="otp-digit" maxlength="1" id="otp-0" oninput="otpInput(0)" onkeydown="otpKeyDown(event,0)"/>
+                            <input type="text" class="otp-digit" maxlength="1" id="otp-1" oninput="otpInput(1)" onkeydown="otpKeyDown(event,1)"/>
+                            <input type="text" class="otp-digit" maxlength="1" id="otp-2" oninput="otpInput(2)" onkeydown="otpKeyDown(event,2)"/>
+                            <input type="text" class="otp-digit" maxlength="1" id="otp-3" oninput="otpInput(3)" onkeydown="otpKeyDown(event,3)"/>
+                            <input type="text" class="otp-digit" maxlength="1" id="otp-4" oninput="otpInput(4)" onkeydown="otpKeyDown(event,4)"/>
+                            <input type="text" class="otp-digit" maxlength="1" id="otp-5" oninput="otpInput(5)" onkeydown="otpKeyDown(event,5)"/>
+                        </div>
+
+                        <button class="btn-auth" onclick="verifyOTP()">
+                            <span>Verify & Continue</span>
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8H13M9 4L13 8L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+
+                        <button class="btn-resend" id="resend-btn" onclick="resendOTP()">
+                            Resend OTP
+                        </button>
+
+                        <button onclick="switchTab('register')" style="background:transparent;border:none;color:var(--text3);font-size:13px;cursor:pointer;margin-top:4px;width:100%">
+                            ← Back to register
+                        </button>
+                    </div>
 
                 <p id="auth-error" class="auth-error"></p>
             </div>

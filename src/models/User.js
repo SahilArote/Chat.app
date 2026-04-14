@@ -41,6 +41,14 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
+    isVerified: {
+    type: Boolean,
+    default: false
+    },
+    otp: {
+        code: String,
+        expiresAt: Date
+    },
     fcmToken: {
         type: String,
         default: ''

@@ -675,3 +675,63 @@ input:focus {
     height: 100dvh; /* IMPORTANT */
 }
 }
+
+
+/* OTP inputs */
+.otp-inputs {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin: 8px 0;
+}
+
+.otp-digit {
+    width: 48px !important;
+    height: 56px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    font-family: var(--font-display);
+    border-radius: var(--r-sm);
+    border: 1.5px solid var(--border2);
+    background: var(--bg);
+    color: var(--text1);
+    padding: 0;
+    margin: 0;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    caret-color: var(--accent);
+}
+
+.otp-digit:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+    outline: none;
+}
+
+.otp-digit.filled {
+    border-color: var(--accent);
+    background: rgba(124,92,252,0.08);
+}
+
+.btn-resend {
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    color: var(--text2);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--font-body);
+}
+
+.btn-resend:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.btn-resend:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}

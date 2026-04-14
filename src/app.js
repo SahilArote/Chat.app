@@ -63,5 +63,14 @@ app.use(errorHandler);
 httpServer.listen(config.port, () => {
     console.log(`Server running in ${config.nodeEnv} mode on port ${config.port}`);
 });
+// src/app.js mein add karo — server khud ko ping karta rahega
+if (config.nodeEnv === 'production') {
+    setInterval(async () => {
+        try {
+            const https = require('https');
+            https.get(process.env.RENDER_URL || 'https://chat-app-r36i.onrender.com/health');
+        } catch {}
+    }, 14 * 60 * 1000); // har 14 min mein ping
+}
 
 module.exports = { app, httpServer };
