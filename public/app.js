@@ -11,8 +11,16 @@ window.onload = async () => {
     if (token) {
         const ok = await loadMe();
         if (ok) { showChatScreen(); connectSocket(); loadConversations(); }
-        else showAuthScreen();
-    } else showAuthScreen();
+        else {
+            // Token invalid — clear karo
+            localStorage.removeItem('token');
+            token = null;
+            showAuthScreen();
+        
+        } else {
+            showAuthScreen();  // Token nahi hai — auth screen dikhao
+        }
+    }
 };
 
 function openSidebar() {
@@ -106,6 +114,7 @@ async function loadMe() {
 }
 
 async function loadConversations() {
+    if (!token) return;
     try {
         const res = await fetch(`${API}/conversations`, { headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
