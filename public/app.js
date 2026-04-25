@@ -10,16 +10,18 @@ let socket = null;
 window.onload = async () => {
     if (token) {
         const ok = await loadMe();
-        if (ok) { showChatScreen(); connectSocket(); loadConversations(); }
-        else {
+        if (ok) {
+            showChatScreen();
+            connectSocket();
+            loadConversations();
+        } else {
             // Token invalid — clear karo
             localStorage.removeItem('token');
             token = null;
             showAuthScreen();
-        
-        } else {
-            showAuthScreen();  // Token nahi hai — auth screen dikhao
         }
+    } else {
+        showAuthScreen();  // Token nahi hai — auth screen dikhao
     }
 };
 
