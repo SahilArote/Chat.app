@@ -1,3 +1,9 @@
+/**
+ * COMPLETE UPDATED: src/models/User.js
+ * BUG 3 FIX: Pre-save hook fixed for async/await
+ * Production ready
+ */
+
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -42,8 +48,8 @@ const userSchema = new mongoose.Schema({
         default: Date.now
     },
     isVerified: {
-    type: Boolean,
-    default: false
+        type: Boolean,
+        default: false
     },
     otp: {
         code: String,
@@ -56,12 +62,16 @@ const userSchema = new mongoose.Schema({
     passwordChangedAt: Date
 }, { timestamps: true });
 
-// Auto hash password before save
+// ───────────────────────────────────────────────────────
+// BUG 3 FIX: Removed next() call - not needed with async
+// Modern Mongoose (v5.11.0+) doesn't require next() callback
+// ───────────────────────────────────────────────────────
 userSchema.pre('save', async function() {
     if (!this.isModified('password')) return;
     this.password = await bcrypt.hash(this.password, 10);
 });
 
+// ─── METHODS ────────────────────────────────────────────
 // Compare password method
 userSchema.methods.comparePassword = async function(candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password);
@@ -74,7 +84,5 @@ userSchema.methods.passwordChangedAfter = function(tokenIssuedAt) {
     }
     return false;
 };
-
-
 
 module.exports = mongoose.model('User', userSchema);
