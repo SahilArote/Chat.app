@@ -372,6 +372,10 @@ function clearOTPInputs() {
 
 async function verifyOTP() {
     const otp = getOTPValue();
+    console.log('OTP value:', otp);
+    console.log('OTP email:', otpEmail);
+    console.log('API URL:', API);
+    
     if (otp.length !== 6) {
         showError('Enter complete 6-digit OTP');
         return;

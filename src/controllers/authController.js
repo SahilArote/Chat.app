@@ -4,10 +4,9 @@ const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { sendOTP } = require('../services/emailService');
 
-// OTP generate karo
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-// REGISTER — OTP bhejo, account create karo unverified
+// REGISTER
 exports.register = asyncHandler(async (req, res) => {
     const { username, email, password } = req.body;
 
@@ -19,7 +18,7 @@ exports.register = asyncHandler(async (req, res) => {
     }
 
     const otp = generateOTP();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     const user = await User.create({
         username, email, password,
@@ -27,13 +26,12 @@ exports.register = asyncHandler(async (req, res) => {
         otp: { code: otp, expiresAt }
     });
 
-    // OTP email bhejo
     await sendOTP(email, otp, username);
 
     res.status(201).json({
         success: true,
         message: 'OTP sent to your email',
-        email // frontend ko pata ho kahan bheja
+        email
     });
 });
 
@@ -43,7 +41,6 @@ exports.verifyOTP = asyncHandler(async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) throw new ApiError(404, 'User not found');
-
     if (user.isVerified) throw new ApiError(400, 'Already verified');
 
     if (!user.otp?.code || user.otp.code !== otp) {
@@ -54,10 +51,11 @@ exports.verifyOTP = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'OTP expired, please register again');
     }
 
-    // Verify karo
-    user.isVerified = true;
-    user.otp = undefined;
-    await user.save();
+    // findByIdAndUpdate — save() nahi
+    await User.findByIdAndUpdate(user._id, {
+        isVerified: true,
+        otp: null
+    });
 
     const token = generateToken(user._id);
 
@@ -83,15 +81,18 @@ exports.resendOTP = asyncHandler(async (req, res) => {
     if (user.isVerified) throw new ApiError(400, 'Already verified');
 
     const otp = generateOTP();
-    user.otp = { code: otp, expiresAt: new Date(Date.now() + 10 * 60 * 1000) };
-    await user.save();
+
+    // findByIdAndUpdate — save() nahi
+    await User.findByIdAndUpdate(user._id, {
+        otp: { code: otp, expiresAt: new Date(Date.now() + 10 * 60 * 1000) }
+    });
 
     await sendOTP(email, otp, user.username);
 
     res.json({ success: true, message: 'New OTP sent' });
 });
 
-// LOGIN — verified check karo
+// LOGIN
 exports.login = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
@@ -101,10 +102,13 @@ exports.login = asyncHandler(async (req, res) => {
     }
 
     if (!user.isVerified) {
-        // Naya OTP bhejo
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        user.otp = { code: otp, expiresAt: new Date(Date.now() + 10 * 60 * 1000) };
-        await user.save();
+        const otp = generateOTP();
+
+        // findByIdAndUpdate — save() nahi
+        await User.findByIdAndUpdate(user._id, {
+            otp: { code: otp, expiresAt: new Date(Date.now() + 10 * 60 * 1000) }
+        });
+
         await sendOTP(email, otp, user.username);
 
         return res.status(403).json({
@@ -115,7 +119,11 @@ exports.login = asyncHandler(async (req, res) => {
         });
     }
 
-    await User.findByIdAndUpdate(user._id, { status: 'online', lastSeen: new Date() });
+    // Online mark karo
+    await User.findByIdAndUpdate(user._id, {
+        status: 'online',
+        lastSeen: new Date()
+    });
 
     const token = generateToken(user._id);
 
@@ -139,6 +147,9 @@ exports.getMe = asyncHandler(async (req, res) => {
 });
 
 exports.logout = asyncHandler(async (req, res) => {
-    await User.findByIdAndUpdate(req.user._id, { status: 'offline', lastSeen: new Date() });
+    await User.findByIdAndUpdate(req.user._id, {
+        status: 'offline',
+        lastSeen: new Date()
+    });
     res.json({ success: true, message: 'Logged out successfully' });
 });
