@@ -136,10 +136,23 @@
 
             <div class="chats-header">
                 <span class="chats-label">Conversations</span>
-                <button class="new-group-btn" onclick="showCreateGroup()">
-                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M7 2V12M2 7H12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                    Group
-                </button>
+                <div class="chats-header-actions">
+                    <button class="new-group-btn" onclick="showCreateGroup()" title="New Group">
+                        <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M7 2V12M2 7H12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                        Group
+                    </button>
+                    <button class="new-friend-btn" onclick="showAddFriend()" title="Add Friend">
+                        <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M7 2V12M2 7H12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                        Friend
+                    </button>
+                </div>
+            </div>
+
+            <!-- Conversation Filter Tabs -->
+            <div class="filter-tabs">
+                <button class="filter-tab active" id="tab-filter-all" onclick="filterChats('all')">All</button>
+                <button class="filter-tab" id="tab-filter-dm" onclick="filterChats('dm')">DMs</button>
+                <button class="filter-tab" id="tab-filter-group" onclick="filterChats('group')">Groups</button>
             </div>
 
             <div id="chats-list" class="chats-list"></div>
@@ -176,6 +189,17 @@
                 <div class="upload-bar" id="upload-progress">
                     <div class="upload-shimmer"></div>
                     <span id="upload-progress-text">Uploading...</span>
+                </div>
+
+                <!-- Reply Preview Panel -->
+                <div class="reply-preview-bar" id="reply-preview-container" style="display: none;">
+                    <div class="reply-preview-content">
+                        <span class="reply-preview-user" id="reply-preview-username">User</span>
+                        <p class="reply-preview-text" id="reply-preview-text">Message content snippet</p>
+                    </div>
+                    <button class="reply-preview-close" onclick="cancelReply()">
+                        <svg width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M4 4L14 14M14 4L4 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </button>
                 </div>
 
                 <div class="input-area">
@@ -218,6 +242,26 @@
                     <span>Create</span>
                     <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 7H12M8 3L12 7L8 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FRIEND MODAL -->
+    <div id="friend-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)hideAddFriend()">
+        <div class="modal-card">
+            <div class="modal-top">
+                <h3>Start a chat</h3>
+                <button class="icon-btn" onclick="hideAddFriend()">
+                    <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M4 4L14 14M14 4L4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+            <div class="input-group">
+                <label>Search user</label>
+                <input type="text" id="friend-search" placeholder="Type username or email..." oninput="searchFriendUsers(this.value)"/>
+            </div>
+            <div id="friend-search-results" class="g-results"></div>
+            <div class="modal-btns">
+                <button class="btn-secondary" onclick="hideAddFriend()" style="width: 100%;">Close</button>
             </div>
         </div>
     </div>

@@ -104,19 +104,27 @@ const deleteMessage = asyncHandler(async (req, res) => {
 
     if (!message) throw new ApiError(404, 'Message not found');
 
-    // Sirf sender delete kar sakta hai
-    if (message.senderId.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, 'You can only delete your own messages');
-    }
-
     if (deleteFor === 'everyone') {
-        // Sabke liye delete
+        // Sabke liye delete — sirf sender
+        if (message.senderId.toString() !== req.user._id.toString()) {
+            throw new ApiError(403, 'You can only delete your own messages for everyone');
+        }
         message.deletedAt = new Date();
         message.content = 'This message was deleted';
         await message.save();
     } else {
-        // Sirf apne liye delete
-        if (!message.deletedFor.includes(req.user._id)) {
+        // Sirf apne liye delete — check conversation membership
+        const conversation = await Conversation.findOne({
+            _id: message.conversationId,
+            members: req.user._id
+        });
+
+        if (!conversation) {
+            throw new ApiError(404, 'Message not found');
+        }
+
+        const alreadyDeleted = message.deletedFor.some(id => id.toString() === req.user._id.toString());
+        if (!alreadyDeleted) {
             message.deletedFor.push(req.user._id);
             await message.save();
         }

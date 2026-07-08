@@ -6,7 +6,7 @@ const Conversation = require('../models/Conversation');
 const config = require('../config');
 
 // Online users track karne ke liye
-// { userId: socketId }
+// { userId: Set(socketId) }
 const onlineUsers = new Map();
 
 const initSocket = (httpServer) => {
@@ -47,20 +47,27 @@ const initSocket = (httpServer) => {
         const userId = socket.user._id.toString();
         console.log(`User connected: ${socket.user.username} (${socket.id})`);
 
-        // Online users map mein add karo
-        onlineUsers.set(userId, socket.id);
+        // Check if user is already online (from another connection)
+        const isAlreadyOnline = onlineUsers.has(userId);
 
-        // User ko online mark karo DB mein
-        await User.findByIdAndUpdate(userId, {
-            status: 'online',
-            lastSeen: new Date()
-        });
+        if (!onlineUsers.has(userId)) {
+            onlineUsers.set(userId, new Set());
+        }
+        onlineUsers.get(userId).add(socket.id);
 
-        // Saare users ko broadcast karo — yeh user online hua
-        socket.broadcast.emit('user_online', {
-            userId,
-            username: socket.user.username
-        });
+        if (!isAlreadyOnline) {
+            // User ko online mark karo DB mein
+            await User.findByIdAndUpdate(userId, {
+                status: 'online',
+                lastSeen: new Date()
+            });
+
+            // Saare users ko broadcast karo — yeh user online hua
+            socket.broadcast.emit('user_online', {
+                userId,
+                username: socket.user.username
+            });
+        }
 
         // ─── JOIN CONVERSATION ───────────────────────────
         // User apni conversations ke rooms mein join karo
@@ -178,24 +185,40 @@ const initSocket = (httpServer) => {
             }
         });
 
+        // ─── REACTION SYNC ───────────────────────────────
+        socket.on('message_reacted', ({ messageId, reactions, conversationId }) => {
+            socket.to(conversationId).emit('reaction_updated', { messageId, reactions });
+        });
+
+        // ─── DELETE SYNC ─────────────────────────────────
+        socket.on('message_deleted', ({ messageId, conversationId, content }) => {
+            socket.to(conversationId).emit('message_deleted_sync', { messageId, content });
+        });
+
         // ─── DISCONNECT ──────────────────────────────────
         socket.on('disconnect', async () => {
             console.log(`User disconnected: ${socket.user.username}`);
 
-            onlineUsers.delete(userId);
+            const socketIds = onlineUsers.get(userId);
+            if (socketIds) {
+                socketIds.delete(socket.id);
+                if (socketIds.size === 0) {
+                    onlineUsers.delete(userId);
 
-            // Offline mark karo
-            await User.findByIdAndUpdate(userId, {
-                status: 'offline',
-                lastSeen: new Date()
-            });
+                    // Offline mark karo
+                    await User.findByIdAndUpdate(userId, {
+                        status: 'offline',
+                        lastSeen: new Date()
+                    });
 
-            // Saare users ko batao
-            socket.broadcast.emit('user_offline', {
-                userId,
-                username: socket.user.username,
-                lastSeen: new Date()
-            });
+                    // Saare users ko batao
+                    socket.broadcast.emit('user_offline', {
+                        userId,
+                        username: socket.user.username,
+                        lastSeen: new Date()
+                    });
+                }
+            }
         });
     });
 

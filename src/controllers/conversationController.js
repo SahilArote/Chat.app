@@ -113,12 +113,14 @@ const addMember = asyncHandler(async (req, res) => {
     if (conversation.type !== 'group') throw new ApiError(400, 'Not a group');
 
     // Sirf admin add kar sakta hai
-    if (!conversation.admins.includes(req.user._id)) {
+    const isAdmin = conversation.admins.some(adminId => adminId.toString() === req.user._id.toString());
+    if (!isAdmin) {
         throw new ApiError(403, 'Only admin can add members');
     }
 
     // Pehle se member hai?
-    if (conversation.members.includes(userId)) {
+    const isMember = conversation.members.some(memberId => memberId.toString() === userId.toString());
+    if (isMember) {
         throw new ApiError(400, 'User is already a member');
     }
 
@@ -141,7 +143,8 @@ const removeMember = asyncHandler(async (req, res) => {
     if (!conversation) throw new ApiError(404, 'Group not found');
 
     // Sirf admin remove kar sakta hai
-    if (!conversation.admins.includes(req.user._id)) {
+    const isAdmin = conversation.admins.some(adminId => adminId.toString() === req.user._id.toString());
+    if (!isAdmin) {
         throw new ApiError(403, 'Only admin can remove members');
     }
 
@@ -172,7 +175,8 @@ const deleteConversation = asyncHandler(async (req, res) => {
     if (!conversation) throw new ApiError(404, 'Conversation not found');
 
     // Sirf apne liye delete karo
-    if (!conversation.deletedFor.includes(req.user._id)) {
+    const alreadyDeleted = conversation.deletedFor.some(id => id.toString() === req.user._id.toString());
+    if (!alreadyDeleted) {
         conversation.deletedFor.push(req.user._id);
         await conversation.save();
     }

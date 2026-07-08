@@ -286,16 +286,33 @@ input:focus {
     color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px;
 }
 
-.new-group-btn {
-    display: flex; align-items: center; gap: 5px;
-    padding: 5px 10px;
-    background: rgba(124,92,252,0.1);
-    border: 1px solid rgba(124,92,252,0.25);
-    border-radius: 20px; color: var(--accent2);
-    font-size: 12px; font-weight: 500;
+.chats-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.new-group-btn, .new-friend-btn {
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11px; font-weight: 600;
     cursor: pointer; transition: all 0.15s;
 }
+
+.new-group-btn {
+    background: rgba(124,92,252,0.1);
+    border: 1px solid rgba(124,92,252,0.25);
+    color: var(--accent2);
+}
 .new-group-btn:hover { background: rgba(124,92,252,0.2); }
+
+.new-friend-btn {
+    background: rgba(34,212,122,0.1);
+    border: 1px solid rgba(34,212,122,0.25);
+    color: var(--online);
+}
+.new-friend-btn:hover { background: rgba(34,212,122,0.2); }
 
 .chats-list { overflow-y: auto; flex: 1; }
 
@@ -734,4 +751,426 @@ input:focus {
 .btn-resend:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+}
+
+/* ═══════════════════════════════
+   WHATSAPP PREMIUM UI UPGRADE
+   ═══════════════════════════════ */
+
+/* Chat Wallpaper */
+.messages-container {
+    background-color: var(--bg);
+    background-image: 
+        radial-gradient(rgba(255,255,255,0.02) 1.2px, transparent 0),
+        radial-gradient(rgba(255,255,255,0.02) 1.2px, transparent 0);
+    background-size: 32px 32px;
+    background-position: 0 0, 16px 16px;
+    position: relative;
+}
+.messages-container::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(124,92,252,0.025) 0%, transparent 75%);
+    pointer-events: none;
+}
+
+/* Conversation Filter Tabs */
+.filter-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+}
+.filter-tab {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--font-body);
+}
+.filter-tab:hover {
+    background: var(--bg3);
+    color: var(--text1);
+    border-color: var(--border2);
+}
+.filter-tab.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    box-shadow: 0 2px 10px var(--accent-glow);
+}
+
+/* Quoted Reply inside bubble */
+.msg-quote {
+    background: rgba(0,0,0,0.22);
+    border-left: 3px solid var(--accent2);
+    padding: 6px 10px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    transition: background 0.15s;
+}
+.msg-quote:hover {
+    background: rgba(0,0,0,0.32);
+}
+.mine .msg-quote {
+    border-left-color: white;
+    background: rgba(255,255,255,0.12);
+}
+.mine .msg-quote:hover {
+    background: rgba(255,255,255,0.18);
+}
+.msg-quote-sender {
+    font-weight: 700;
+    color: var(--accent2);
+    font-size: 11.5px;
+}
+.mine .msg-quote-sender {
+    color: white;
+}
+.msg-quote-text {
+    color: var(--text1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
+    opacity: 0.85;
+}
+
+/* Reply Preview Bar above Input Area */
+.reply-preview-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--bg3);
+    border-top: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    animation: slideUp 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes slideUp {
+    from { transform: translateY(8px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+.reply-preview-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+.reply-preview-user {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent2);
+}
+.reply-preview-text {
+    font-size: 13px;
+    color: var(--text2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
+}
+.reply-preview-close {
+    background: transparent;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s;
+}
+.reply-preview-close:hover {
+    color: var(--danger);
+}
+
+/* Hover Action Menus */
+.msg-bubble-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    max-width: 100%;
+}
+.msg-bubble {
+    position: relative;
+    padding-right: 28px !important; /* Space for action dropdown trigger */
+}
+.msg-actions {
+    position: absolute;
+    right: 6px;
+    top: 6px;
+    opacity: 0;
+    transition: opacity 0.12s;
+    z-index: 10;
+}
+.msg-bubble:hover .msg-actions {
+    opacity: 1;
+}
+.msg-actions-trigger {
+    background: transparent;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    padding: 3px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    outline: none;
+}
+.msg-actions-trigger:hover {
+    background: rgba(255,255,255,0.08);
+    color: var(--text1);
+}
+.mine .msg-actions-trigger:hover {
+    background: rgba(0,0,0,0.12);
+    color: white;
+}
+
+/* Actions Dropdown */
+.msg-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: var(--r-sm);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    z-index: 50;
+    min-width: 150px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+.msg-dropdown.show {
+    display: block;
+}
+.msg-dropdown button {
+    width: 100%;
+    padding: 9px 12px;
+    background: transparent;
+    border: none;
+    color: var(--text1);
+    font-family: var(--font-body);
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.12s;
+    outline: none;
+}
+.msg-dropdown button:hover {
+    background: var(--bg3);
+}
+.msg-dropdown button.danger {
+    color: var(--danger);
+}
+.msg-dropdown button.danger:hover {
+    background: rgba(255,92,92,0.08);
+}
+
+/* Emoji Picker Popup */
+.emoji-picker-popup {
+    display: none;
+    position: absolute;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    padding: 5px 8px;
+    gap: 5px;
+    z-index: 100;
+    animation: popIn 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes popIn {
+    from { transform: scale(0.85); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+.emoji-pick-btn {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 3px;
+    border-radius: 50%;
+    transition: transform 0.12s, background 0.12s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.emoji-pick-btn:hover {
+    transform: scale(1.22);
+    background: var(--bg3);
+}
+
+/* Floating Reaction Badges */
+.msg-reactions-wrapper {
+    display: flex;
+    gap: 4px;
+    margin-top: -6px;
+    margin-bottom: 2px;
+    z-index: 10;
+    padding: 0 6px;
+}
+.mine .msg-reactions-wrapper {
+    justify-content: flex-end;
+}
+.reaction-badge {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 2px 6px;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    animation: popIn 0.15s ease;
+}
+
+/* Read ticks and Meta info */
+.msg-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 3px;
+    padding: 0 4px;
+}
+.mine .msg-meta {
+    justify-content: flex-end;
+}
+.msg-ticks {
+    font-size: 11px;
+    color: var(--text3);
+    line-height: 1;
+    font-weight: 500;
+}
+.msg-ticks.read {
+    color: #34b7f1; /* WhatsApp blue ticks */
+}
+.msg-content-wrapper {
+    min-height: 16px;
+}
+.deleted-msg-text {
+    color: var(--text3);
+    font-style: italic;
+    font-size: 13px;
+}
+
+/* Highlight Flash for quote scrolls */
+.highlight-flash {
+    animation: flashHighlight 1.5s ease;
+}
+@keyframes flashHighlight {
+    0%, 100% { background: transparent; }
+    30%, 70% { background: rgba(124,92,252,0.18); border-radius: 12px; }
+}
+
+/* ═══════════════════════════════
+   MOBILE RESPONSIVENESS OVERHAUL
+   ═══════════════════════════════ */
+
+/* Use dvh for true full screen heights on mobile */
+html, body, .screen, .chat-layout, .sidebar, .chat-area {
+    height: 100dvh !important;
+}
+
+@media (max-width: 768px) {
+    /* Prevent iOS Auto Zoom on Input Focus */
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+    
+    /* Center Auth Card on Small Screens */
+    .auth-card {
+        padding: 24px 18px;
+        max-width: 90%;
+    }
+    
+    /* Touch target padding increases */
+    .icon-btn, .btn-secondary, .btn-auth {
+        min-height: 44px;
+    }
+    
+    .attach-btn, .send-btn {
+        width: 44px;
+        height: 44px;
+    }
+    
+    .input-area {
+        gap: 10px;
+        padding: 10px 12px;
+    }
+    
+    /* Scrollbars hidden on mobile lists for native feel */
+    .chats-list::-webkit-scrollbar, .messages-container::-webkit-scrollbar {
+        width: 0px !important;
+        display: none;
+    }
+    
+    /* Transition slide styling */
+    .sidebar {
+        transform: translateX(0);
+        width: 100vw;
+        max-width: 100vw;
+        position: absolute;
+        z-index: 10;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .sidebar.hidden {
+        transform: translateX(-100%) !important;
+    }
+    
+    .chat-area {
+        transform: translateX(100%);
+        width: 100vw;
+        max-width: 100vw;
+        position: absolute;
+        z-index: 20;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .chat-area.active {
+        transform: translateX(0) !important;
+    }
+    
+    /* Header optimizations on Mobile */
+    .chat-header {
+        padding: 10px 12px;
+    }
+    
+    .back-btn {
+        display: flex !important;
+        margin-right: 4px;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .chat-hname {
+        font-size: 14.5px;
+    }
+    
+    /* Responsive message bubble size */
+    .msg-wrap {
+        max-width: 85%;
+    }
+    .msg-bubble {
+        font-size: 14.5px;
+        padding: 8px 12px;
+    }
 }
