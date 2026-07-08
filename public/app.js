@@ -143,7 +143,10 @@ async function register() {
         const data = await res.json();
         if (!res.ok) return showError(data.error);
         showOTPScreen(email);
-    } catch { showError('Server error, try again'); }
+    } catch (err) { 
+        console.error('Registration API Error:', err);
+        showError('Server error, try again'); 
+    }
 }
 
 async function login() {
@@ -167,7 +170,10 @@ async function login() {
         showChatScreen();
         connectSocket();
         loadConversations();
-    } catch { showError('Server error, try again'); }
+    } catch (err) { 
+        console.error('Login API Error:', err);
+        showError('Server error, try again'); 
+    }
 }
 
 async function logout() {
@@ -782,7 +788,8 @@ async function verifyOTP() {
         connectSocket();
         loadConversations();
 
-    } catch {
+    } catch (err) {
+        console.error('Verify OTP API Error:', err);
         showError('Something went wrong');
         btn.disabled = false;
         btn.querySelector('span').textContent = 'Verify & Continue';
@@ -801,7 +808,10 @@ async function resendOTP() {
         showError('');
         clearOTPInputs();
         startResendTimer();
-    } catch { showError('Failed to resend OTP'); }
+    } catch (err) { 
+        console.error('Resend OTP API Error:', err);
+        showError('Failed to resend OTP'); 
+    }
 }
 
 async function handleFileUpload(input) {
