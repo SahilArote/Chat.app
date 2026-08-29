@@ -1,20 +1,10 @@
 import { Types } from 'mongoose';
-import Message, { IMessageDocument } from './message.model';
+import Message from './message.model';
 import { IReaction } from './message.types';
 import Conversation from '../conversations/conversation.model';
 import ApiError from '../../utils/ApiError';
 import { ErrorCode } from '../../utils/errorCodes';
-
-export interface PaginatedMessages {
-    messages: IMessageDocument[];
-    pagination: {
-        page: number;
-        limit: number;
-        total: number;
-        pages: number;
-        hasMore: boolean;
-    };
-}
+import { PaginationOptions, PaginationResult, PaginationHelper } from '../../utils/pagination';
 
 export class MessageService {
     async sendMessage(
@@ -23,11 +13,11 @@ export class MessageService {
         content?: string,
         type: 'text' | 'image' | 'video' | 'file' = 'text',
         replyTo?: string | null
-    ): Promise<IMessageDocument> {
+    ): Promise<any> {
         const conversation = await Conversation.findOne({
             _id: conversationId,
             members: senderId
-        });
+        }).select('_id');
 
         if (!conversation) {
             throw new ApiError(404, 'Conversation not found', ErrorCode.CONVERSATION_NOT_FOUND);
@@ -37,7 +27,7 @@ export class MessageService {
             throw new ApiError(400, 'Message content is required', ErrorCode.BAD_REQUEST);
         }
 
-        const message: IMessageDocument = await Message.create({
+        const message = await Message.create({
             conversationId: new Types.ObjectId(conversationId),
             senderId: new Types.ObjectId(senderId.toString()),
             type,
@@ -52,53 +42,77 @@ export class MessageService {
 
         const populated = await Message.findById(message._id)
             .populate('senderId', 'username avatar')
-            .populate('replyTo');
+            .populate('replyTo')
+            .lean();
 
-        return populated!;
+        return populated;
     }
 
     async getMessages(
         conversationId: string,
         userId: Types.ObjectId | string,
-        page: number = 1,
-        limit: number = 30
-    ): Promise<PaginatedMessages> {
+        options: PaginationOptions = {}
+    ): Promise<PaginationResult<any>> {
         const conversation = await Conversation.findOne({
             _id: conversationId,
             members: userId
-        });
+        }).select('_id');
 
         if (!conversation) {
             throw new ApiError(404, 'Conversation not found', ErrorCode.CONVERSATION_NOT_FOUND);
         }
 
-        const skip = (page - 1) * limit;
+        const limit = PaginationHelper.sanitizeLimit(options.limit, 30);
+        const page = PaginationHelper.sanitizePage(options.page);
 
-        const messages = await Message.find({
-            conversationId,
-            deletedFor: { $ne: userId },
+        const filter: any = {
+            conversationId: new Types.ObjectId(conversationId),
+            deletedFor: { $ne: new Types.ObjectId(userId.toString()) },
             deletedAt: null
-        })
-        .populate('senderId', 'username avatar')
-        .populate('replyTo')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit);
+        };
 
-        const total = await Message.countDocuments({
-            conversationId,
-            deletedFor: { $ne: userId },
-            deletedAt: null
-        });
+        // Cursor-based pagination support
+        if (options.cursor || options.before) {
+            const cursorId = options.cursor || options.before;
+            filter._id = { $lt: new Types.ObjectId(cursorId) };
+        } else if (options.after) {
+            filter._id = { $gt: new Types.ObjectId(options.after) };
+        }
+
+        const skip = options.cursor || options.before || options.after ? 0 : (page - 1) * limit;
+
+        const [messages, total] = await Promise.all([
+            Message.find(filter)
+                .select('_id conversationId senderId type content reactions readBy replyTo isDeleted deletedAt createdAt updatedAt')
+                .populate('senderId', 'username avatar')
+                .populate('replyTo')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit + 1)
+                .lean(),
+            Message.countDocuments({
+                conversationId: new Types.ObjectId(conversationId),
+                deletedFor: { $ne: new Types.ObjectId(userId.toString()) },
+                deletedAt: null
+            })
+        ]);
+
+        const hasMore = messages.length > limit;
+        const resultMessages = hasMore ? messages.slice(0, limit) : messages;
+
+        const nextCursor = resultMessages.length > 0 ? resultMessages[resultMessages.length - 1]._id.toString() : null;
+        const prevCursor = resultMessages.length > 0 ? resultMessages[0]._id.toString() : null;
 
         return {
-            messages: messages.reverse(),
+            items: resultMessages.reverse(),
             pagination: {
                 page,
                 limit,
                 total,
                 pages: Math.ceil(total / limit),
-                hasMore: page < Math.ceil(total / limit)
+                hasMore,
+                nextCursor: hasMore ? nextCursor : null,
+                prevCursor
             }
         };
     }
@@ -115,6 +129,7 @@ export class MessageService {
             if (message.senderId.toString() !== userId.toString()) {
                 throw new ApiError(403, 'You can only delete your own messages for everyone', ErrorCode.CANNOT_DELETE_MESSAGE);
             }
+            message.isDeleted = true;
             message.deletedAt = new Date();
             message.content = 'This message was deleted';
             await message.save();
@@ -122,7 +137,7 @@ export class MessageService {
             const conversation = await Conversation.findOne({
                 _id: message.conversationId,
                 members: userId
-            });
+            }).select('_id');
 
             if (!conversation) {
                 throw new ApiError(404, 'Message not found', ErrorCode.MESSAGE_NOT_FOUND);

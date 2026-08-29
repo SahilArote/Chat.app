@@ -1,47 +1,65 @@
-import mongoose, { Document, Model, Schema, Types } from 'mongoose';
-import { IConversation } from './conversation.types';
+import mongoose, { Document, Schema, Types } from 'mongoose';
 
-export interface IConversationDocument extends Document<Types.ObjectId>, IConversation {}
+export interface IConversationDocument extends Document {
+    type: 'dm' | 'group';
+    name?: string;
+    members: Types.ObjectId[];
+    admins?: Types.ObjectId[];
+    lastMessage?: Types.ObjectId | null;
+    isDeleted: boolean;
+    deletedAt?: Date | null;
+    deletedFor?: Types.ObjectId[];
+    createdAt: Date;
+    updatedAt: Date;
+}
 
-export type ConversationModel = Model<IConversationDocument>;
-
-const conversationSchema = new Schema<IConversationDocument, ConversationModel>({
-    type: {
-        type: String,
-        enum: ['dm', 'group'],
-        required: true
+const conversationSchema = new Schema<IConversationDocument>(
+    {
+        type: {
+            type: String,
+            enum: ['dm', 'group'],
+            default: 'dm'
+        },
+        name: {
+            type: String,
+            trim: true,
+            default: null
+        },
+        members: [{
+            type: Schema.Types.ObjectId,
+            ref: 'User',
+            required: true
+        }],
+        admins: [{
+            type: Schema.Types.ObjectId,
+            ref: 'User'
+        }],
+        lastMessage: {
+            type: Schema.Types.ObjectId,
+            ref: 'Message',
+            default: null
+        },
+        isDeleted: {
+            type: Boolean,
+            default: false
+        },
+        deletedAt: {
+            type: Date,
+            default: null
+        },
+        deletedFor: [{
+            type: Schema.Types.ObjectId,
+            ref: 'User'
+        }]
     },
-    name: {
-        type: String,
-        trim: true,
-        default: ''
-    },
-    members: [{
-        type: Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    }],
-    admins: [{
-        type: Schema.Types.ObjectId,
-        ref: 'User'
-    }],
-    groupAvatar: {
-        type: String,
-        default: ''
-    },
-    lastMessage: {
-        type: Schema.Types.ObjectId,
-        ref: 'Message',
-        default: null
-    },
-    deletedFor: [{
-        type: Schema.Types.ObjectId,
-        ref: 'User'
-    }]
-}, { timestamps: true });
+    {
+        timestamps: true
+    }
+);
 
-// Fast lookup — user ki saari conversations
-conversationSchema.index({ members: 1 });
+// ─── COMPOUND & PERFORMANCE INDEXES ─────────────────────────────
+conversationSchema.index({ members: 1, updatedAt: -1 });
+conversationSchema.index({ type: 1, members: 1 });
 
-export const Conversation = mongoose.model<IConversationDocument, ConversationModel>('Conversation', conversationSchema);
+export const Conversation = mongoose.model<IConversationDocument>('Conversation', conversationSchema);
 export default Conversation;

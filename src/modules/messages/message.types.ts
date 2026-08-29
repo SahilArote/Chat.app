@@ -10,6 +10,8 @@ export interface IReadBy {
     readAt: Date;
 }
 
+export type IReadReceipt = IReadBy;
+
 export interface IMessage {
     conversationId: Types.ObjectId;
     senderId: Types.ObjectId;
@@ -21,6 +23,7 @@ export interface IMessage {
     replyTo?: Types.ObjectId | null;
     reactions?: IReaction[];
     readBy?: IReadBy[];
+    isDeleted?: boolean;
     deletedFor?: Types.ObjectId[];
     deletedAt?: Date | null;
     createdAt?: Date;

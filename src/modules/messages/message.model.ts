@@ -1,79 +1,88 @@
-import mongoose, { Document, Model, Schema, Types } from 'mongoose';
-import { IMessage, IReaction, IReadBy } from './message.types';
+import mongoose, { Document, Schema, Types } from 'mongoose';
+import { IReaction, IReadReceipt } from './message.types';
 
-export interface IMessageDocument extends Document<Types.ObjectId>, IMessage {}
+export interface IMessageDocument extends Document {
+    conversationId: Types.ObjectId;
+    senderId: Types.ObjectId;
+    type: 'text' | 'image' | 'video' | 'file';
+    content: string;
+    reactions: IReaction[];
+    readBy: IReadReceipt[];
+    replyTo?: Types.ObjectId | null;
+    isDeleted: boolean;
+    deletedAt?: Date | null;
+    deletedFor?: Types.ObjectId[];
+    createdAt: Date;
+    updatedAt: Date;
+}
 
-export type MessageModel = Model<IMessageDocument>;
+const reactionSchema = new Schema<IReaction>(
+    {
+        userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        emoji: { type: String, required: true }
+    },
+    { _id: false }
+);
 
-const messageSchema = new Schema<IMessageDocument, MessageModel>({
-    conversationId: {
-        type: Schema.Types.ObjectId,
-        ref: 'Conversation',
-        required: true
+const readReceiptSchema = new Schema<IReadReceipt>(
+    {
+        userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        readAt: { type: Date, default: Date.now }
     },
-    senderId: {
-        type: Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
-    type: {
-        type: String,
-        enum: ['text', 'image', 'video', 'file'],
-        default: 'text'
-    },
-    content: {
-        type: String,
-        default: ''
-    },
-    fileUrl: {
-        type: String,
-        default: ''
-    },
-    fileName: {
-        type: String,
-        default: ''
-    },
-    fileSize: {
-        type: Number,
-        default: 0
-    },
-    replyTo: {
-        type: Schema.Types.ObjectId,
-        ref: 'Message',
-        default: null
-    },
-    reactions: [{
-        userId: {
+    { _id: false }
+);
+
+const messageSchema = new Schema<IMessageDocument>(
+    {
+        conversationId: {
             type: Schema.Types.ObjectId,
-            ref: 'User'
+            ref: 'Conversation',
+            required: true
         },
-        emoji: String
-    }],
-    readBy: [{
-        userId: {
+        senderId: {
             type: Schema.Types.ObjectId,
-            ref: 'User'
+            ref: 'User',
+            required: true
         },
-        readAt: {
+        type: {
+            type: String,
+            enum: ['text', 'image', 'video', 'file'],
+            default: 'text'
+        },
+        content: {
+            type: String,
+            default: ''
+        },
+        reactions: [reactionSchema],
+        readBy: [readReceiptSchema],
+        replyTo: {
+            type: Schema.Types.ObjectId,
+            ref: 'Message',
+            default: null
+        },
+        isDeleted: {
+            type: Boolean,
+            default: false
+        },
+        deletedAt: {
             type: Date,
-            default: Date.now
-        }
-    }],
-    deletedFor: [{
-        type: Schema.Types.ObjectId,
-        ref: 'User'
-    }],
-    deletedAt: {
-        type: Date,
-        default: null
+            default: null
+        },
+        deletedFor: [{
+            type: Schema.Types.ObjectId,
+            ref: 'User'
+        }]
+    },
+    {
+        timestamps: true
     }
-}, { timestamps: true });
+);
 
-// Fast chat load — latest messages pehle
+// ─── COMPOUND & PERFORMANCE INDEXES ─────────────────────────────
 messageSchema.index({ conversationId: 1, createdAt: -1 });
+messageSchema.index({ conversationId: 1, isDeleted: 1, createdAt: -1 });
+messageSchema.index({ senderId: 1, createdAt: -1 });
+messageSchema.index({ replyTo: 1 });
 
-// User message history
-messageSchema.index({ senderId: 1 });
-
-export const Message = mongoose.model<IMessageDocument, MessageModel>('Message', messageSchema);
+export const Message = mongoose.model<IMessageDocument>('Message', messageSchema);
 export default Message;

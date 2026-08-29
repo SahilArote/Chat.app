@@ -19,7 +19,10 @@ export const getMessagesSchema = {
     }),
     query: z.object({
         page: z.coerce.number().int().min(1).optional(),
-        limit: z.coerce.number().int().min(1).max(100).optional()
+        limit: z.coerce.number().int().min(1).max(100).optional(),
+        cursor: z.string().regex(objectIdRegex, 'Invalid cursor Message ID').optional(),
+        before: z.string().regex(objectIdRegex, 'Invalid before Message ID').optional(),
+        after: z.string().regex(objectIdRegex, 'Invalid after Message ID').optional()
     })
 };
 

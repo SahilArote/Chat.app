@@ -5,14 +5,14 @@ import ApiError from '../../utils/ApiError';
 import { ErrorCode } from '../../utils/errorCodes';
 
 export class ConversationService {
-    async createOrGetDM(currentUserId: Types.ObjectId | string, targetUserId: string): Promise<IConversationDocument> {
+    async createOrGetDM(currentUserId: Types.ObjectId | string, targetUserId: string): Promise<any> {
         if (!targetUserId) throw new ApiError(400, 'UserId is required', ErrorCode.BAD_REQUEST);
 
         if (targetUserId === currentUserId.toString()) {
             throw new ApiError(400, 'You cannot chat with yourself', ErrorCode.CANNOT_CHAT_WITH_SELF);
         }
 
-        const otherUser = await User.findById(targetUserId);
+        const otherUser = await User.findById(targetUserId).select('_id');
         if (!otherUser) throw new ApiError(404, 'User not found', ErrorCode.USER_NOT_FOUND);
 
         let conversation = await Conversation.findOne({
@@ -20,7 +20,8 @@ export class ConversationService {
             members: { $all: [currentUserId, targetUserId] }
         })
         .populate('members', 'username avatar status lastSeen')
-        .populate('lastMessage');
+        .populate('lastMessage')
+        .lean();
 
         if (!conversation) {
             const newConv = await Conversation.create({
@@ -30,23 +31,25 @@ export class ConversationService {
 
             conversation = await Conversation.findById(newConv._id)
                 .populate('members', 'username avatar status lastSeen')
-                .populate('lastMessage');
+                .populate('lastMessage')
+                .lean();
         }
 
-        return conversation!;
+        return conversation;
     }
 
-    async getMyConversations(userId: Types.ObjectId | string): Promise<IConversationDocument[]> {
+    async getMyConversations(userId: Types.ObjectId | string): Promise<any[]> {
         return await Conversation.find({
             members: userId,
             deletedFor: { $ne: userId }
         })
         .populate('members', 'username avatar status lastSeen')
         .populate('lastMessage')
-        .sort({ updatedAt: -1 });
+        .sort({ updatedAt: -1 })
+        .lean();
     }
 
-    async createGroup(creatorId: Types.ObjectId | string, name: string, members: string[]): Promise<IConversationDocument> {
+    async createGroup(creatorId: Types.ObjectId | string, name: string, members: string[]): Promise<any> {
         if (!name) throw new ApiError(400, 'Group name is required', ErrorCode.BAD_REQUEST);
 
         if (!members || !Array.isArray(members) || members.length < 2) {
@@ -64,19 +67,21 @@ export class ConversationService {
 
         const populated = await Conversation.findById(conversation._id)
             .populate('members', 'username avatar status lastSeen')
-            .populate('admins', 'username avatar');
+            .populate('admins', 'username avatar')
+            .lean();
 
-        return populated!;
+        return populated;
     }
 
-    async getConversationById(conversationId: string, userId: Types.ObjectId | string): Promise<IConversationDocument> {
+    async getConversationById(conversationId: string, userId: Types.ObjectId | string): Promise<any> {
         const conversation = await Conversation.findOne({
             _id: conversationId,
             members: userId
         })
         .populate('members', 'username avatar status lastSeen')
         .populate('admins', 'username avatar')
-        .populate('lastMessage');
+        .populate('lastMessage')
+        .lean();
 
         if (!conversation) {
             throw new ApiError(404, 'Conversation not found', ErrorCode.CONVERSATION_NOT_FOUND);
@@ -85,7 +90,7 @@ export class ConversationService {
         return conversation;
     }
 
-    async addMember(conversationId: string, adminId: Types.ObjectId | string, targetUserId: string): Promise<IConversationDocument> {
+    async addMember(conversationId: string, adminId: Types.ObjectId | string, targetUserId: string): Promise<any> {
         const conversation = await Conversation.findById(conversationId);
         if (!conversation) throw new ApiError(404, 'Group not found', ErrorCode.CONVERSATION_NOT_FOUND);
         if (conversation.type !== 'group') throw new ApiError(400, 'Not a group', ErrorCode.BAD_REQUEST);
@@ -104,12 +109,13 @@ export class ConversationService {
         await conversation.save();
 
         const updated = await Conversation.findById(conversation._id)
-            .populate('members', 'username avatar status lastSeen');
+            .populate('members', 'username avatar status lastSeen')
+            .lean();
 
-        return updated!;
+        return updated;
     }
 
-    async removeMember(conversationId: string, adminId: Types.ObjectId | string, targetUserId: string): Promise<IConversationDocument> {
+    async removeMember(conversationId: string, adminId: Types.ObjectId | string, targetUserId: string): Promise<any> {
         const conversation = await Conversation.findById(conversationId);
         if (!conversation) throw new ApiError(404, 'Group not found', ErrorCode.CONVERSATION_NOT_FOUND);
 
@@ -128,9 +134,10 @@ export class ConversationService {
         await conversation.save();
 
         const updated = await Conversation.findById(conversation._id)
-            .populate('members', 'username avatar status lastSeen');
+            .populate('members', 'username avatar status lastSeen')
+            .lean();
 
-        return updated!;
+        return updated;
     }
 
     async deleteConversation(conversationId: string, userId: Types.ObjectId | string): Promise<void> {
