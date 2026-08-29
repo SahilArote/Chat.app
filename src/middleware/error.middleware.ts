@@ -2,14 +2,20 @@ import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
 import config from '../config';
 import { ErrorCode } from '../utils/errorCodes';
 import ApiResponse from '../utils/apiResponse';
+import logger from '../utils/logger';
 
 export const errorHandler: ErrorRequestHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
     let statusCode = err.statusCode || 500;
     let code: ErrorCode | string = err.code || ErrorCode.INTERNAL_SERVER_ERROR;
     let message = err.message || 'Something went wrong';
 
-    // Server-side logging for diagnostics
-    console.error(`[Error Handler] [${req.requestId || 'no-id'}] Status ${statusCode} (${code}): ${message}\n`, err.stack || '');
+    // Structured server-side logging
+    logger.error(`Status ${statusCode} (${code}): ${message}`, {
+        requestId: req.requestId,
+        stack: err.stack,
+        path: req.originalUrl,
+        method: req.method
+    });
 
     // Mongoose bad ObjectId
     if (err.name === 'CastError') {

@@ -1,0 +1,43 @@
+name: Pulse Chat CI
+
+on:
+  push:
+    branches: [ main, upgrade/industry-architecture ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7-jammy
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Type Check
+        run: npx tsc --noEmit
+
+      - name: Build TypeScript Project
+        run: npm run build
+
+      - name: Run Automated Tests
+        run: npm test
+        env:
+          NODE_ENV: test
+          MONGO_URI: mongodb://localhost:27017/pulse-chat-test
+          JWT_SECRET: test_secret_key_1234567890

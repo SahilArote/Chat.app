@@ -62,8 +62,6 @@ const userSchema = new Schema<IUserDocument, UserModel, IUserMethods>({
 }, { timestamps: true });
 
 // ─── INDEXES ─────────────────────────────────────────────────────
-userSchema.index({ username: 1 });
-userSchema.index({ email: 1 });
 userSchema.index({ status: 1, lastSeen: -1 });
 
 // Auto hash password before save
