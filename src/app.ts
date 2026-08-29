@@ -1,4 +1,4 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -6,23 +6,23 @@ import { createServer } from 'http';
 import path from 'path';
 import https from 'https';
 
-import connectDB from './config/db';
 import config from './config';
-import errorHandler from './middlewares/errorHandler';
-import { initSocket } from './socket';
+import connectDB from './infrastructure/database/mongoose';
+import errorHandler from './middleware/error.middleware';
+import { initSocket } from './websocket/socket.server';
 
 // Register models
-import './models/User';
-import './models/Message';
-import './models/Conversation';
-import './models/Notification';
+import './modules/users/user.model';
+import './modules/messages/message.model';
+import './modules/conversations/conversation.model';
+import './modules/notifications/notification.model';
 
-// Route imports
-import authRoutes from './routes/auth';
-import userRoutes from './routes/user';
-import conversationRoutes from './routes/conversation';
-import messageRoutes from './routes/message';
-import uploadRoutes from './routes/upload';
+// Modular route imports
+import authRoutes from './modules/auth/auth.routes';
+import userRoutes from './modules/users/user.routes';
+import conversationRoutes from './modules/conversations/conversation.routes';
+import messageRoutes from './modules/messages/message.routes';
+import mediaRoutes from './modules/media/media.routes';
 
 const app = express();
 const httpServer = createServer(app);
@@ -60,7 +60,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/messages', messageRoutes);
-app.use('/api/upload', uploadRoutes);
+app.use('/api/upload', mediaRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
