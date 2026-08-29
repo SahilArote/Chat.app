@@ -9,7 +9,10 @@ import https from 'https';
 import config from './config';
 import connectDB from './infrastructure/database/mongoose';
 import errorHandler from './middleware/error.middleware';
+import requestId from './middleware/requestId.middleware';
 import { initSocket } from './websocket/socket.server';
+import ApiResponse from './utils/apiResponse';
+import { ErrorCode } from './utils/errorCodes';
 
 // Register models
 import './modules/users/user.model';
@@ -30,6 +33,9 @@ const httpServer = createServer(app);
 
 // DB connect
 connectDB();
+
+// Request ID tracking middleware
+app.use(requestId);
 
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
@@ -53,7 +59,7 @@ app.set('io', io);
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
-    res.json({ status: 'OK', message: 'Chat API is running' });
+    return ApiResponse.success(res, { status: 'OK', message: 'Chat API is running' });
 });
 
 // Primary API v1 Routes
@@ -68,7 +74,7 @@ app.use('/api/upload', mediaRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
-    res.status(404).json({ error: `Route ${req.originalUrl} not found` });
+    return ApiResponse.error(res, ErrorCode.ROUTE_NOT_FOUND, `Route ${req.originalUrl} not found`, 404);
 });
 
 // Global error handler

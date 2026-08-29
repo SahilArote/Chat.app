@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import User from '../users/user.model';
 import generateToken from '../../utils/generateToken';
 import ApiError from '../../utils/ApiError';
+import { ErrorCode } from '../../utils/errorCodes';
 import { sendOTPEmail } from '../../infrastructure/email/email.service';
 import { AuthSuccessResult, RegisterDto } from './auth.types';
 
@@ -15,8 +16,11 @@ export class AuthService {
 
         const existing = await User.findOne({ $or: [{ email }, { username }] });
         if (existing) {
-            throw new ApiError(400,
-                existing.email === email ? 'Email already registered' : 'Username already taken'
+            const isEmail = existing.email === email;
+            throw new ApiError(
+                400,
+                isEmail ? 'Email already registered' : 'Username already taken',
+                isEmail ? ErrorCode.EMAIL_ALREADY_REGISTERED : ErrorCode.USERNAME_ALREADY_TAKEN
             );
         }
 
@@ -40,15 +44,15 @@ export class AuthService {
 
     async verifyOTP(email: string, otp: string): Promise<AuthSuccessResult> {
         const user = await User.findOne({ email });
-        if (!user) throw new ApiError(404, 'User not found');
-        if (user.isVerified) throw new ApiError(400, 'Already verified');
+        if (!user) throw new ApiError(404, 'User not found', ErrorCode.USER_NOT_FOUND);
+        if (user.isVerified) throw new ApiError(400, 'Already verified', ErrorCode.BAD_REQUEST);
 
         if (!user.otp?.code || user.otp.code !== otp) {
-            throw new ApiError(400, 'Invalid OTP');
+            throw new ApiError(400, 'Invalid OTP', ErrorCode.INVALID_OTP);
         }
 
         if (!user.otp.expiresAt || user.otp.expiresAt < new Date()) {
-            throw new ApiError(400, 'OTP expired, please register again');
+            throw new ApiError(400, 'OTP expired, please register again', ErrorCode.OTP_EXPIRED);
         }
 
         await User.findByIdAndUpdate(user._id, {
@@ -73,8 +77,8 @@ export class AuthService {
 
     async resendOTP(email: string): Promise<{ success: boolean; message: string }> {
         const user = await User.findOne({ email });
-        if (!user) throw new ApiError(404, 'User not found');
-        if (user.isVerified) throw new ApiError(400, 'Already verified');
+        if (!user) throw new ApiError(404, 'User not found', ErrorCode.USER_NOT_FOUND);
+        if (user.isVerified) throw new ApiError(400, 'Already verified', ErrorCode.BAD_REQUEST);
 
         const otp = this.generateOTP();
 
@@ -89,12 +93,12 @@ export class AuthService {
 
     async login(email: string, password?: string): Promise<AuthSuccessResult | { needsVerification: true; email: string; message: string }> {
         if (!email || !password) {
-            throw new ApiError(400, 'Please provide email and password');
+            throw new ApiError(400, 'Please provide email and password', ErrorCode.BAD_REQUEST);
         }
 
         const user = await User.findOne({ email }).select('+password');
         if (!user || !(await user.comparePassword(password))) {
-            throw new ApiError(401, 'Invalid email or password');
+            throw new ApiError(401, 'Invalid email or password', ErrorCode.INVALID_CREDENTIALS);
         }
 
         if (!user.isVerified) {

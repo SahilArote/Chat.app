@@ -2,17 +2,18 @@ import { Types } from 'mongoose';
 import Conversation, { IConversationDocument } from './conversation.model';
 import User from '../users/user.model';
 import ApiError from '../../utils/ApiError';
+import { ErrorCode } from '../../utils/errorCodes';
 
 export class ConversationService {
     async createOrGetDM(currentUserId: Types.ObjectId | string, targetUserId: string): Promise<IConversationDocument> {
-        if (!targetUserId) throw new ApiError(400, 'UserId is required');
+        if (!targetUserId) throw new ApiError(400, 'UserId is required', ErrorCode.BAD_REQUEST);
 
         if (targetUserId === currentUserId.toString()) {
-            throw new ApiError(400, 'You cannot chat with yourself');
+            throw new ApiError(400, 'You cannot chat with yourself', ErrorCode.CANNOT_CHAT_WITH_SELF);
         }
 
         const otherUser = await User.findById(targetUserId);
-        if (!otherUser) throw new ApiError(404, 'User not found');
+        if (!otherUser) throw new ApiError(404, 'User not found', ErrorCode.USER_NOT_FOUND);
 
         let conversation = await Conversation.findOne({
             type: 'dm',
@@ -46,10 +47,10 @@ export class ConversationService {
     }
 
     async createGroup(creatorId: Types.ObjectId | string, name: string, members: string[]): Promise<IConversationDocument> {
-        if (!name) throw new ApiError(400, 'Group name is required');
+        if (!name) throw new ApiError(400, 'Group name is required', ErrorCode.BAD_REQUEST);
 
         if (!members || !Array.isArray(members) || members.length < 2) {
-            throw new ApiError(400, 'Group must have at least 2 other members');
+            throw new ApiError(400, 'Group must have at least 2 other members', ErrorCode.BAD_REQUEST);
         }
 
         const allMembers = [...new Set([...members, creatorId.toString()])];
@@ -78,7 +79,7 @@ export class ConversationService {
         .populate('lastMessage');
 
         if (!conversation) {
-            throw new ApiError(404, 'Conversation not found');
+            throw new ApiError(404, 'Conversation not found', ErrorCode.CONVERSATION_NOT_FOUND);
         }
 
         return conversation;
@@ -86,17 +87,17 @@ export class ConversationService {
 
     async addMember(conversationId: string, adminId: Types.ObjectId | string, targetUserId: string): Promise<IConversationDocument> {
         const conversation = await Conversation.findById(conversationId);
-        if (!conversation) throw new ApiError(404, 'Group not found');
-        if (conversation.type !== 'group') throw new ApiError(400, 'Not a group');
+        if (!conversation) throw new ApiError(404, 'Group not found', ErrorCode.CONVERSATION_NOT_FOUND);
+        if (conversation.type !== 'group') throw new ApiError(400, 'Not a group', ErrorCode.BAD_REQUEST);
 
         const isAdmin = conversation.admins?.some(id => id.toString() === adminId.toString());
         if (!isAdmin) {
-            throw new ApiError(403, 'Only admin can add members');
+            throw new ApiError(403, 'Only admin can add members', ErrorCode.NOT_GROUP_ADMIN);
         }
 
         const isMember = conversation.members.some(id => id.toString() === targetUserId);
         if (isMember) {
-            throw new ApiError(400, 'User is already a member');
+            throw new ApiError(400, 'User is already a member', ErrorCode.ALREADY_GROUP_MEMBER);
         }
 
         conversation.members.push(new Types.ObjectId(targetUserId));
@@ -110,15 +111,15 @@ export class ConversationService {
 
     async removeMember(conversationId: string, adminId: Types.ObjectId | string, targetUserId: string): Promise<IConversationDocument> {
         const conversation = await Conversation.findById(conversationId);
-        if (!conversation) throw new ApiError(404, 'Group not found');
+        if (!conversation) throw new ApiError(404, 'Group not found', ErrorCode.CONVERSATION_NOT_FOUND);
 
         const isAdmin = conversation.admins?.some(id => id.toString() === adminId.toString());
         if (!isAdmin) {
-            throw new ApiError(403, 'Only admin can remove members');
+            throw new ApiError(403, 'Only admin can remove members', ErrorCode.NOT_GROUP_ADMIN);
         }
 
         if (targetUserId === adminId.toString()) {
-            throw new ApiError(400, 'Admin cannot remove themselves');
+            throw new ApiError(400, 'Admin cannot remove themselves', ErrorCode.ADMIN_CANNOT_REMOVE_SELF);
         }
 
         conversation.members = conversation.members.filter(
@@ -138,7 +139,7 @@ export class ConversationService {
             members: userId
         });
 
-        if (!conversation) throw new ApiError(404, 'Conversation not found');
+        if (!conversation) throw new ApiError(404, 'Conversation not found', ErrorCode.CONVERSATION_NOT_FOUND);
 
         if (!conversation.deletedFor) {
             conversation.deletedFor = [];

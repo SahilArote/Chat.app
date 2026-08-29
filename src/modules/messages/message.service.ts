@@ -3,6 +3,7 @@ import Message, { IMessageDocument } from './message.model';
 import { IReaction } from './message.types';
 import Conversation from '../conversations/conversation.model';
 import ApiError from '../../utils/ApiError';
+import { ErrorCode } from '../../utils/errorCodes';
 
 export interface PaginatedMessages {
     messages: IMessageDocument[];
@@ -29,11 +30,11 @@ export class MessageService {
         });
 
         if (!conversation) {
-            throw new ApiError(404, 'Conversation not found');
+            throw new ApiError(404, 'Conversation not found', ErrorCode.CONVERSATION_NOT_FOUND);
         }
 
         if (!content && type === 'text') {
-            throw new ApiError(400, 'Message content is required');
+            throw new ApiError(400, 'Message content is required', ErrorCode.BAD_REQUEST);
         }
 
         const message: IMessageDocument = await Message.create({
@@ -68,7 +69,7 @@ export class MessageService {
         });
 
         if (!conversation) {
-            throw new ApiError(404, 'Conversation not found');
+            throw new ApiError(404, 'Conversation not found', ErrorCode.CONVERSATION_NOT_FOUND);
         }
 
         const skip = (page - 1) * limit;
@@ -108,11 +109,11 @@ export class MessageService {
         deleteFor?: string
     ): Promise<void> {
         const message = await Message.findById(messageId);
-        if (!message) throw new ApiError(404, 'Message not found');
+        if (!message) throw new ApiError(404, 'Message not found', ErrorCode.MESSAGE_NOT_FOUND);
 
         if (deleteFor === 'everyone') {
             if (message.senderId.toString() !== userId.toString()) {
-                throw new ApiError(403, 'You can only delete your own messages for everyone');
+                throw new ApiError(403, 'You can only delete your own messages for everyone', ErrorCode.CANNOT_DELETE_MESSAGE);
             }
             message.deletedAt = new Date();
             message.content = 'This message was deleted';
@@ -124,7 +125,7 @@ export class MessageService {
             });
 
             if (!conversation) {
-                throw new ApiError(404, 'Message not found');
+                throw new ApiError(404, 'Message not found', ErrorCode.MESSAGE_NOT_FOUND);
             }
 
             if (!message.deletedFor) {
@@ -144,7 +145,7 @@ export class MessageService {
         emoji: string
     ): Promise<IReaction[]> {
         const message = await Message.findById(messageId);
-        if (!message) throw new ApiError(404, 'Message not found');
+        if (!message) throw new ApiError(404, 'Message not found', ErrorCode.MESSAGE_NOT_FOUND);
 
         if (!message.reactions) {
             message.reactions = [];
@@ -173,7 +174,7 @@ export class MessageService {
         userId: Types.ObjectId | string
     ): Promise<void> {
         const message = await Message.findById(messageId);
-        if (!message) throw new ApiError(404, 'Message not found');
+        if (!message) throw new ApiError(404, 'Message not found', ErrorCode.MESSAGE_NOT_FOUND);
 
         if (!message.readBy) {
             message.readBy = [];

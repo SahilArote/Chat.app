@@ -2,6 +2,15 @@ const API = window.location.hostname === 'localhost'
     ? 'http://localhost:3000/api/v1'
     : `${window.location.origin}/api/v1`;
 
+function unwrap(json) {
+    if (!json) return json;
+    const errorMsg = json.error?.message || (typeof json.error === 'string' ? json.error : null);
+    if (json.data && typeof json.data === 'object') {
+        return { ...json, ...json.data, error: errorMsg };
+    }
+    return { ...json, error: errorMsg };
+}
+
 let token = localStorage.getItem('token');
 let currentUser = null;
 let currentChatId = null;
@@ -140,7 +149,7 @@ async function register() {
     if (!username || !email || !password) return showError('Please fill all fields');
     try {
         const res = await fetch(`${API}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, email, password }) });
-        const data = await res.json();
+        const data = unwrap(await res.json());
         if (!res.ok) return showError(data.error);
         showOTPScreen(email);
     } catch (err) { 
@@ -155,7 +164,7 @@ async function login() {
     if (!email || !password) return showError('Please fill all fields');
     try {
         const res = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-        const data = await res.json();
+        const data = unwrap(await res.json());
         if (!res.ok) {
             if (data.needsVerification) {
                 showOTPScreen(data.email);
@@ -186,7 +195,7 @@ async function logout() {
 async function loadMe() {
     try {
         const res = await fetch(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
-        const data = await res.json();
+        const data = unwrap(await res.json());
         if (!res.ok) return false;
         currentUser = data.user; return true;
     } catch { return false; }
@@ -196,7 +205,7 @@ async function loadConversations() {
     if (!token) return;
     try {
         const res = await fetch(`${API}/conversations`, { headers: { Authorization: `Bearer ${token}` } });
-        const data = await res.json();
+        const data = unwrap(await res.json());
         if (!res.ok) return;
         conversationsData = data.conversations;
         filterChats(currentFilter);
@@ -304,7 +313,7 @@ async function loadMessages(conversationId) {
     container.innerHTML = '<p style="text-align:center;color:var(--text3);font-size:13px;padding:24px">Loading...</p>';
     try {
         const res = await fetch(`${API}/messages/${conversationId}`, { headers: { Authorization: `Bearer ${token}` } });
-        const data = await res.json();
+        const data = unwrap(await res.json());
         if (!res.ok) return;
         container.innerHTML = '';
         activeMessagesList = data.messages;
@@ -505,7 +514,7 @@ async function deleteMessage(msgId, deleteFor) {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${token}` }
         });
-        const data = await res.json();
+        const data = unwrap(await res.json());
         if (!res.ok) {
             alert(data.error || 'Failed to delete message');
             return;
@@ -563,7 +572,7 @@ async function sendReaction(msgId, emoji) {
             },
             body: JSON.stringify({ emoji })
         });
-        const data = await res.json();
+        const data = unwrap(await res.json());
         if (!res.ok) return;
         
         const msg = activeMessagesList.find(m => m._id === msgId);
@@ -629,7 +638,7 @@ async function searchUsers(query) {
     if (!query.trim()) { box.innerHTML = ''; return; }
     try {
         const res = await fetch(`${API}/users/search?q=${query}`, { headers: { Authorization: `Bearer ${token}` } });
-        const data = await res.json();
+        const data = unwrap(await res.json());
         box.innerHTML = '';
         if (!data.users?.length) { box.innerHTML = '<p style="padding:12px 16px;color:var(--text3);font-size:13px">No users found</p>'; return; }
         data.users.forEach(user => {
@@ -645,7 +654,7 @@ async function searchUsers(query) {
 async function startDM(user) {
     try {
         const res = await fetch(`${API}/conversations`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ userId: user._id }) });
-        const data = await res.json();
+        const data = unwrap(await res.json());
         if (!res.ok) return;
         await loadConversations(); 
         openChat(data.conversation);
@@ -769,7 +778,7 @@ async function verifyOTP() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: otpEmail, otp })
         });
-        const data = await res.json();
+        const data = unwrap(await res.json());
 
         if (!res.ok) {
             showError(data.error);
@@ -803,7 +812,7 @@ async function resendOTP() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: otpEmail })
         });
-        const data = await res.json();
+        const data = unwrap(await res.json());
         if (!res.ok) { showError(data.error); return; }
         showError('');
         clearOTPInputs();
@@ -832,7 +841,7 @@ async function handleFileUpload(input) {
         const formData = new FormData();
         formData.append('file', file);
         const res = await fetch(`${API}/upload/${uploadType}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
-        const data = await res.json();
+        const data = unwrap(await res.json());
         
         if (!res.ok) { 
             progressText.textContent = 'Upload failed'; 
@@ -885,7 +894,7 @@ async function searchGroupUsers(query) {
     if (!query.trim()) { box.innerHTML = ''; return; }
     try {
         const res = await fetch(`${API}/users/search?q=${query}`, { headers: { Authorization: `Bearer ${token}` } });
-        const data = await res.json();
+        const data = unwrap(await res.json());
         box.innerHTML = '';
         if (!data.users?.length) { box.innerHTML = '<p style="padding:8px;color:var(--text3);font-size:12px">No users found</p>'; return; }
         data.users.forEach(user => {
@@ -924,7 +933,7 @@ async function createGroup() {
     if (selectedMembers.length < 2) { errEl.textContent = 'Add at least 2 members'; return; }
     try {
         const res = await fetch(`${API}/conversations/group`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ name, members: selectedMembers.map(m => m._id) }) });
-        const data = await res.json();
+        const data = unwrap(await res.json());
         if (!res.ok) { errEl.textContent = data.error; return; }
         hideCreateGroup(); 
         await loadConversations(); 
@@ -952,7 +961,7 @@ async function searchFriendUsers(query) {
     if (!box) return;
     try {
         const res = await fetch(`${API}/users/search?q=${query}`, { headers: { Authorization: `Bearer ${token}` } });
-        const data = await res.json();
+        const data = unwrap(await res.json());
         box.innerHTML = '';
         if (!data.users?.length) { box.innerHTML = '<p style="padding:8px;color:var(--text3);font-size:12px">No users found</p>'; return; }
         data.users.forEach(user => {

@@ -2,9 +2,11 @@ import { Request, Response } from 'express';
 import messageService from './message.service';
 import asyncHandler from '../../utils/asyncHandler';
 import ApiError from '../../utils/ApiError';
+import ApiResponse from '../../utils/apiResponse';
+import { ErrorCode } from '../../utils/errorCodes';
 
 export const sendMessage = asyncHandler(async (req: Request, res: Response) => {
-    if (!req.user) throw new ApiError(401, 'Not authenticated');
+    if (!req.user) throw new ApiError(401, 'Not authenticated', ErrorCode.UNAUTHORIZED);
     const conversationId = req.params.conversationId as string;
     const { content, type = 'text', replyTo } = req.body;
 
@@ -16,11 +18,11 @@ export const sendMessage = asyncHandler(async (req: Request, res: Response) => {
         replyTo
     );
 
-    res.status(201).json({ success: true, message });
+    return ApiResponse.success(res, { message }, 201);
 });
 
 export const getMessages = asyncHandler(async (req: Request, res: Response) => {
-    if (!req.user) throw new ApiError(401, 'Not authenticated');
+    if (!req.user) throw new ApiError(401, 'Not authenticated', ErrorCode.UNAUTHORIZED);
     const conversationId = req.params.conversationId as string;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 30;
@@ -32,15 +34,14 @@ export const getMessages = asyncHandler(async (req: Request, res: Response) => {
         limit
     );
 
-    res.json({
-        success: true,
+    return ApiResponse.success(res, {
         messages: result.messages,
         pagination: result.pagination
     });
 });
 
 export const deleteMessage = asyncHandler(async (req: Request, res: Response) => {
-    if (!req.user) throw new ApiError(401, 'Not authenticated');
+    if (!req.user) throw new ApiError(401, 'Not authenticated', ErrorCode.UNAUTHORIZED);
     const { deleteFor } = req.query;
 
     await messageService.deleteMessage(
@@ -49,11 +50,11 @@ export const deleteMessage = asyncHandler(async (req: Request, res: Response) =>
         deleteFor as string
     );
 
-    res.json({ success: true, message: 'Message deleted' });
+    return ApiResponse.success(res, { message: 'Message deleted' });
 });
 
 export const reactToMessage = asyncHandler(async (req: Request, res: Response) => {
-    if (!req.user) throw new ApiError(401, 'Not authenticated');
+    if (!req.user) throw new ApiError(401, 'Not authenticated', ErrorCode.UNAUTHORIZED);
     const { emoji } = req.body;
 
     const reactions = await messageService.reactToMessage(
@@ -62,16 +63,16 @@ export const reactToMessage = asyncHandler(async (req: Request, res: Response) =
         emoji
     );
 
-    res.json({ success: true, reactions });
+    return ApiResponse.success(res, { reactions });
 });
 
 export const markAsRead = asyncHandler(async (req: Request, res: Response) => {
-    if (!req.user) throw new ApiError(401, 'Not authenticated');
+    if (!req.user) throw new ApiError(401, 'Not authenticated', ErrorCode.UNAUTHORIZED);
 
     await messageService.markAsRead(
         req.params.id as string,
         req.user._id
     );
 
-    res.json({ success: true, message: 'Marked as read' });
+    return ApiResponse.success(res, { message: 'Marked as read' });
 });
