@@ -6,6 +6,7 @@ export enum ErrorCode {
     FORBIDDEN = 'FORBIDDEN',
     NOT_FOUND = 'NOT_FOUND',
     ROUTE_NOT_FOUND = 'ROUTE_NOT_FOUND',
+    TOO_MANY_REQUESTS = 'TOO_MANY_REQUESTS',
     
     // Auth & Identity
     USER_NOT_FOUND = 'USER_NOT_FOUND',

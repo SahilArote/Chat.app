@@ -10,6 +10,8 @@ import config from './config';
 import connectDB from './infrastructure/database/mongoose';
 import errorHandler from './middleware/error.middleware';
 import requestId from './middleware/requestId.middleware';
+import sanitize from './middleware/sanitize.middleware';
+import { apiLimiter } from './middleware/rateLimit.middleware';
 import { initSocket } from './websocket/socket.server';
 import ApiResponse from './utils/apiResponse';
 import { ErrorCode } from './utils/errorCodes';
@@ -41,13 +43,14 @@ app.use(requestId);
 app.use(express.static(path.join(__dirname, '../public')));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Middleware
+// Security & Parsing Middleware
 app.use(helmet({
     contentSecurityPolicy: false // Allow inline scripts for legacy vanilla frontend
 }));
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(sanitize);
 
 if (config.nodeEnv === 'development') {
     app.use(morgan('dev'));
@@ -62,8 +65,8 @@ app.get('/health', (req: Request, res: Response) => {
     return ApiResponse.success(res, { status: 'OK', message: 'Chat API is running' });
 });
 
-// Primary API v1 Routes
-app.use('/api/v1', v1Router);
+// Primary API v1 Routes (Protected with global apiLimiter)
+app.use('/api/v1', apiLimiter, v1Router);
 
 // Legacy /api Routes (Backward Compatibility)
 app.use('/api/auth', authRoutes);

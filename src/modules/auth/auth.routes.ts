@@ -5,6 +5,7 @@ import {
 } from './auth.controller';
 import { protect } from '../../middleware/auth.middleware';
 import validate from '../../middleware/validate.middleware';
+import { authLimiter } from '../../middleware/rateLimit.middleware';
 import {
     registerSchema,
     verifyOTPSchema,
@@ -14,10 +15,10 @@ import {
 
 const router = express.Router();
 
-router.post('/register', validate(registerSchema), register);
-router.post('/verify-otp', validate(verifyOTPSchema), verifyOTP);
-router.post('/resend-otp', validate(resendOTPSchema), resendOTP);
-router.post('/login', validate(loginSchema), login);
+router.post('/register', authLimiter, validate(registerSchema), register);
+router.post('/verify-otp', authLimiter, validate(verifyOTPSchema), verifyOTP);
+router.post('/resend-otp', authLimiter, validate(resendOTPSchema), resendOTP);
+router.post('/login', authLimiter, validate(loginSchema), login);
 router.get('/me', protect, getMe);
 router.post('/logout', protect, logout);
 

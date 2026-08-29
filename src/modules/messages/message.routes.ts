@@ -8,6 +8,7 @@ import {
 } from './message.controller';
 import { protect } from '../../middleware/auth.middleware';
 import validate from '../../middleware/validate.middleware';
+import { messageLimiter } from '../../middleware/rateLimit.middleware';
 import {
     sendMessageSchema,
     getMessagesSchema,
@@ -20,7 +21,7 @@ const router = express.Router();
 
 router.use(protect);
 
-router.post('/:conversationId', validate(sendMessageSchema), sendMessage);
+router.post('/:conversationId', messageLimiter, validate(sendMessageSchema), sendMessage);
 router.get('/:conversationId', validate(getMessagesSchema), getMessages);
 router.delete('/:id', validate(deleteMessageSchema), deleteMessage);
 router.patch('/:id/react', validate(reactToMessageSchema), reactToMessage);

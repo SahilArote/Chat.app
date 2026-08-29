@@ -12,10 +12,16 @@ export const validate = (schema: RequestValidationSchema) => {
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             if (schema.params) {
-                req.params = (await schema.params.parseAsync(req.params)) as any;
+                const parsed = await schema.params.parseAsync(req.params);
+                if (req.params && typeof req.params === 'object') {
+                    Object.assign(req.params, parsed);
+                }
             }
             if (schema.query) {
-                req.query = (await schema.query.parseAsync(req.query)) as any;
+                const parsed = await schema.query.parseAsync(req.query);
+                if (req.query && typeof req.query === 'object') {
+                    Object.assign(req.query, parsed);
+                }
             }
             if (schema.body) {
                 req.body = await schema.body.parseAsync(req.body);
