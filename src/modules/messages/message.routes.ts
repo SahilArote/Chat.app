@@ -7,15 +7,23 @@ import {
     markAsRead
 } from './message.controller';
 import { protect } from '../../middleware/auth.middleware';
+import validate from '../../middleware/validate.middleware';
+import {
+    sendMessageSchema,
+    getMessagesSchema,
+    deleteMessageSchema,
+    reactToMessageSchema,
+    markAsReadSchema
+} from './message.validation';
 
 const router = express.Router();
 
 router.use(protect);
 
-router.post('/:conversationId', sendMessage);
-router.get('/:conversationId', getMessages);
-router.delete('/:id', deleteMessage);
-router.patch('/:id/react', reactToMessage);
-router.patch('/:id/read', markAsRead);
+router.post('/:conversationId', validate(sendMessageSchema), sendMessage);
+router.get('/:conversationId', validate(getMessagesSchema), getMessages);
+router.delete('/:id', validate(deleteMessageSchema), deleteMessage);
+router.patch('/:id/react', validate(reactToMessageSchema), reactToMessage);
+router.patch('/:id/read', validate(markAsReadSchema), markAsRead);
 
 export default router;
