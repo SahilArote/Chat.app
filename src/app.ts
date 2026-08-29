@@ -18,6 +18,7 @@ import './modules/conversations/conversation.model';
 import './modules/notifications/notification.model';
 
 // Modular route imports
+import v1Router from './routes/v1.router';
 import authRoutes from './modules/auth/auth.routes';
 import userRoutes from './modules/users/user.routes';
 import conversationRoutes from './modules/conversations/conversation.routes';
@@ -55,7 +56,10 @@ app.get('/health', (req: Request, res: Response) => {
     res.json({ status: 'OK', message: 'Chat API is running' });
 });
 
-// Routes
+// Primary API v1 Routes
+app.use('/api/v1', v1Router);
+
+// Legacy /api Routes (Backward Compatibility)
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/conversations', conversationRoutes);

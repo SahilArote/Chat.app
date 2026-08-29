@@ -1,6 +1,6 @@
 const API = window.location.hostname === 'localhost'
-    ? 'http://localhost:3000/api'
-    : `${window.location.origin}/api`;
+    ? 'http://localhost:3000/api/v1'
+    : `${window.location.origin}/api/v1`;
 
 let token = localStorage.getItem('token');
 let currentUser = null;
