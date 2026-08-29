@@ -1,10 +1,11 @@
-const multer = require('multer');
-const ApiError = require('../utils/ApiError');
+import multer, { FileFilterCallback } from 'multer';
+import { Request } from 'express';
+import ApiError from '../utils/ApiError';
 
 // Memory storage — seedha Cloudinary pe jayega
 const storage = multer.memoryStorage();
 
-const fileFilter = (req, file, cb) => {
+const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback): void => {
     const allowed = [
         'image/jpeg', 'image/jpg', 'image/png',
         'image/gif', 'image/webp',
@@ -17,7 +18,7 @@ const fileFilter = (req, file, cb) => {
     if (allowed.includes(file.mimetype)) {
         cb(null, true);
     } else {
-        cb(new ApiError(400, 'File type not allowed'), false);
+        cb(new ApiError(400, 'File type not allowed') as any, false);
     }
 };
 
@@ -27,4 +28,4 @@ const upload = multer({
     limits: { fileSize: 50 * 1024 * 1024 }
 });
 
-module.exports = upload;
+export default upload;

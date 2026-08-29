@@ -1,13 +1,14 @@
-const User = require('../models/User');
-const generateToken = require('../utils/generateToken');
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/ApiError');
-const { sendOTP } = require('../services/emailService');
+import { Request, Response } from 'express';
+import User from '../models/User';
+import generateToken from '../utils/generateToken';
+import asyncHandler from '../utils/asyncHandler';
+import ApiError from '../utils/ApiError';
+import { sendOTP } from '../services/emailService';
 
-const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+const generateOTP = (): string => Math.floor(100000 + Math.random() * 900000).toString();
 
 // REGISTER
-exports.register = asyncHandler(async (req, res) => {
+export const register = asyncHandler(async (req: Request, res: Response) => {
     const { username, email, password } = req.body;
 
     const existing = await User.findOne({ $or: [{ email }, { username }] });
@@ -20,7 +21,7 @@ exports.register = asyncHandler(async (req, res) => {
     const otp = generateOTP();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    const user = await User.create({
+    await User.create({
         username, email, password,
         isVerified: false,
         otp: { code: otp, expiresAt }
@@ -36,7 +37,7 @@ exports.register = asyncHandler(async (req, res) => {
 });
 
 // VERIFY OTP
-exports.verifyOTP = asyncHandler(async (req, res) => {
+export const verifyOTP = asyncHandler(async (req: Request, res: Response) => {
     const { email, otp } = req.body;
 
     const user = await User.findOne({ email });
@@ -47,7 +48,7 @@ exports.verifyOTP = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Invalid OTP');
     }
 
-    if (user.otp.expiresAt < new Date()) {
+    if (!user.otp.expiresAt || user.otp.expiresAt < new Date()) {
         throw new ApiError(400, 'OTP expired, please register again');
     }
 
@@ -73,7 +74,7 @@ exports.verifyOTP = asyncHandler(async (req, res) => {
 });
 
 // RESEND OTP
-exports.resendOTP = asyncHandler(async (req, res) => {
+export const resendOTP = asyncHandler(async (req: Request, res: Response) => {
     const { email } = req.body;
 
     const user = await User.findOne({ email });
@@ -93,7 +94,7 @@ exports.resendOTP = asyncHandler(async (req, res) => {
 });
 
 // LOGIN
-exports.login = asyncHandler(async (req, res) => {
+export const login = asyncHandler(async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email }).select('+password');
@@ -111,12 +112,13 @@ exports.login = asyncHandler(async (req, res) => {
 
         await sendOTP(email, otp, user.username);
 
-        return res.status(403).json({
+        res.status(403).json({
             success: false,
             needsVerification: true,
             email,
             message: 'Please verify your email first. OTP sent.'
         });
+        return;
     }
 
     // Online mark karo
@@ -141,12 +143,14 @@ exports.login = asyncHandler(async (req, res) => {
     });
 });
 
-exports.getMe = asyncHandler(async (req, res) => {
+export const getMe = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new ApiError(401, 'Not authenticated');
     const user = await User.findById(req.user._id);
     res.json({ success: true, user });
 });
 
-exports.logout = asyncHandler(async (req, res) => {
+export const logout = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new ApiError(401, 'Not authenticated');
     await User.findByIdAndUpdate(req.user._id, {
         status: 'offline',
         lastSeen: new Date()

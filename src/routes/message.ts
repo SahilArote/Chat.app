@@ -1,13 +1,14 @@
-const express = require('express');
-const router = express.Router();
-const {
+import express from 'express';
+import {
     sendMessage,
     getMessages,
     deleteMessage,
     reactToMessage,
     markAsRead
-} = require('../controllers/messageController');
-const { protect } = require('../middlewares/auth');
+} from '../controllers/messageController';
+import { protect } from '../middlewares/auth';
+
+const router = express.Router();
 
 router.use(protect);
 
@@ -17,4 +18,4 @@ router.delete('/:id', deleteMessage);
 router.patch('/:id/react', reactToMessage);
 router.patch('/:id/read', markAsRead);
 
-module.exports = router;
+export default router;

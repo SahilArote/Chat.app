@@ -1,9 +1,10 @@
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/ApiError');
-const uploadToCloudinary = require('../utils/uploadToCloudinary');
-const User = require('../models/User');
+import { Request, Response } from 'express';
+import asyncHandler from '../utils/asyncHandler';
+import ApiError from '../utils/ApiError';
+import uploadToCloudinary from '../utils/uploadToCloudinary';
+import User from '../models/User';
 
-const uploadImage = asyncHandler(async (req, res) => {
+export const uploadImage = asyncHandler(async (req: Request, res: Response) => {
     if (!req.file) throw new ApiError(400, 'No file uploaded');
 
     const result = await uploadToCloudinary(req.file.buffer, {
@@ -23,7 +24,7 @@ const uploadImage = asyncHandler(async (req, res) => {
     });
 });
 
-const uploadVideo = asyncHandler(async (req, res) => {
+export const uploadVideo = asyncHandler(async (req: Request, res: Response) => {
     if (!req.file) throw new ApiError(400, 'No file uploaded');
 
     const result = await uploadToCloudinary(req.file.buffer, {
@@ -40,7 +41,7 @@ const uploadVideo = asyncHandler(async (req, res) => {
     });
 });
 
-const uploadFile = asyncHandler(async (req, res) => {
+export const uploadFile = asyncHandler(async (req: Request, res: Response) => {
     if (!req.file) throw new ApiError(400, 'No file uploaded');
 
     const result = await uploadToCloudinary(req.file.buffer, {
@@ -59,7 +60,8 @@ const uploadFile = asyncHandler(async (req, res) => {
     });
 });
 
-const uploadAvatar = asyncHandler(async (req, res) => {
+export const uploadAvatar = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new ApiError(401, 'Not authenticated');
     if (!req.file) throw new ApiError(400, 'No file uploaded');
 
     const result = await uploadToCloudinary(req.file.buffer, {
@@ -79,5 +81,3 @@ const uploadAvatar = asyncHandler(async (req, res) => {
         url: result.secure_url
     });
 });
-
-module.exports = { uploadImage, uploadVideo, uploadFile, uploadAvatar };

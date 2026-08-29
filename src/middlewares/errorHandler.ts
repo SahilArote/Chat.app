@@ -1,6 +1,7 @@
-const config = require('../config');
+import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
+import config from '../config';
 
-const errorHandler = (err, req, res, next) => {
+const errorHandler: ErrorRequestHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
     let statusCode = err.statusCode || 500;
     let message = err.message || 'Something went wrong';
 
@@ -15,14 +16,14 @@ const errorHandler = (err, req, res, next) => {
 
     // Duplicate key
     if (err.code === 11000) {
-        const field = Object.keys(err.keyValue)[0];
+        const field = Object.keys(err.keyValue || {})[0] || 'Field';
         message = `${field} already exists`;
         statusCode = 400;
     }
 
     // Mongoose validation
     if (err.name === 'ValidationError') {
-        message = Object.values(err.errors).map(e => e.message).join(', ');
+        message = Object.values(err.errors || {}).map((e: any) => e.message).join(', ');
         statusCode = 400;
     }
 
@@ -44,4 +45,4 @@ const errorHandler = (err, req, res, next) => {
     });
 };
 
-module.exports = errorHandler;
+export default errorHandler;

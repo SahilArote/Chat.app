@@ -1,13 +1,14 @@
-const express = require('express');
-const router = express.Router();
-const upload = require('../middlewares/upload');
-const { protect } = require('../middlewares/auth');
-const {
+import express from 'express';
+import upload from '../middlewares/upload';
+import { protect } from '../middlewares/auth';
+import {
     uploadImage,
     uploadVideo,
     uploadFile,
     uploadAvatar
-} = require('../controllers/uploadController');
+} from '../controllers/uploadController';
+
+const router = express.Router();
 
 router.use(protect);
 
@@ -16,4 +17,4 @@ router.post('/video', upload.single('file'), uploadVideo);
 router.post('/file', upload.single('file'), uploadFile);
 router.post('/avatar', upload.single('file'), uploadAvatar);
 
-module.exports = router;
+export default router;

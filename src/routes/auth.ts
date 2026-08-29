@@ -1,10 +1,11 @@
-const express = require('express');
-const router = express.Router();
-const {
+import express from 'express';
+import {
     register, login, getMe, logout,
     verifyOTP, resendOTP
-} = require('../controllers/authController');
-const { protect } = require('../middlewares/auth');
+} from '../controllers/authController';
+import { protect } from '../middlewares/auth';
+
+const router = express.Router();
 
 router.post('/register', register);
 router.post('/verify-otp', verifyOTP);
@@ -13,4 +14,4 @@ router.post('/login', login);
 router.get('/me', protect, getMe);
 router.post('/logout', protect, logout);
 
-module.exports = router;
+export default router;

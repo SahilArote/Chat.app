@@ -1,15 +1,24 @@
-const { Server } = require('socket.io');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const Message = require('../models/Message');
-const Conversation = require('../models/Conversation');
-const config = require('../config');
+import { Server as HttpServer } from 'http';
+import { Server, Socket } from 'socket.io';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import User, { IUserDocument } from '../models/User';
+import Message from '../models/Message';
+import Conversation from '../models/Conversation';
+import config from '../config';
+
+interface AuthenticatedSocket extends Socket {
+    user?: IUserDocument;
+}
+
+interface DecodedToken extends JwtPayload {
+    userId: string;
+}
 
 // Online users track karne ke liye
 // { userId: Set(socketId) }
-const onlineUsers = new Map();
+export const onlineUsers = new Map<string, Set<string>>();
 
-const initSocket = (httpServer) => {
+export const initSocket = (httpServer: HttpServer): Server => {
     const io = new Server(httpServer, {
         cors: {
             origin: '*',
@@ -19,7 +28,7 @@ const initSocket = (httpServer) => {
 
     // ─── AUTH MIDDLEWARE ─────────────────────────────────
     // Har socket connection pe pehle token verify karo
-    io.use(async (socket, next) => {
+    io.use(async (socket: AuthenticatedSocket, next) => {
         try {
             const token = socket.handshake.auth.token;
 
@@ -27,7 +36,7 @@ const initSocket = (httpServer) => {
                 return next(new Error('Authentication required'));
             }
 
-            const decoded = jwt.verify(token, config.jwt.secret);
+            const decoded = jwt.verify(token, config.jwt.secret) as DecodedToken;
             const user = await User.findById(decoded.userId);
 
             if (!user) {
@@ -43,9 +52,11 @@ const initSocket = (httpServer) => {
     });
 
     // ─── CONNECTION ──────────────────────────────────────
-    io.on('connection', async (socket) => {
+    io.on('connection', async (socket: AuthenticatedSocket) => {
+        if (!socket.user) return;
         const userId = socket.user._id.toString();
-        console.log(`User connected: ${socket.user.username} (${socket.id})`);
+        const username = socket.user.username;
+        console.log(`User connected: ${username} (${socket.id})`);
 
         // Check if user is already online (from another connection)
         const isAlreadyOnline = onlineUsers.has(userId);
@@ -53,7 +64,7 @@ const initSocket = (httpServer) => {
         if (!onlineUsers.has(userId)) {
             onlineUsers.set(userId, new Set());
         }
-        onlineUsers.get(userId).add(socket.id);
+        onlineUsers.get(userId)!.add(socket.id);
 
         if (!isAlreadyOnline) {
             // User ko online mark karo DB mein
@@ -65,13 +76,13 @@ const initSocket = (httpServer) => {
             // Saare users ko broadcast karo — yeh user online hua
             socket.broadcast.emit('user_online', {
                 userId,
-                username: socket.user.username
+                username
             });
         }
 
         // ─── JOIN CONVERSATION ───────────────────────────
         // User apni conversations ke rooms mein join karo
-        socket.on('join_conversation', async (conversationId) => {
+        socket.on('join_conversation', async (conversationId: string) => {
             try {
                 // Check karo user is conversation ka member hai
                 const conversation = await Conversation.findOne({
@@ -85,17 +96,17 @@ const initSocket = (httpServer) => {
                 }
 
                 socket.join(conversationId);
-                console.log(`${socket.user.username} joined room: ${conversationId}`);
+                console.log(`${username} joined room: ${conversationId}`);
 
                 socket.emit('joined_conversation', { conversationId });
 
-            } catch (err) {
+            } catch (err: any) {
                 socket.emit('error', { message: err.message });
             }
         });
 
         // ─── SEND MESSAGE ────────────────────────────────
-        socket.on('send_message', async (data) => {
+        socket.on('send_message', async (data: any) => {
             try {
                 const { conversationId, content, type = 'text', replyTo } = data;
 
@@ -136,22 +147,22 @@ const initSocket = (httpServer) => {
                     conversationId
                 });
 
-            } catch (err) {
+            } catch (err: any) {
                 socket.emit('error', { message: err.message });
             }
         });
 
         // ─── TYPING ──────────────────────────────────────
-        socket.on('typing', ({ conversationId }) => {
+        socket.on('typing', ({ conversationId }: { conversationId: string }) => {
             // Room mein baaki sabko batao — sender ko nahi
             socket.to(conversationId).emit('user_typing', {
                 userId,
-                username: socket.user.username,
+                username,
                 conversationId
             });
         });
 
-        socket.on('stop_typing', ({ conversationId }) => {
+        socket.on('stop_typing', ({ conversationId }: { conversationId: string }) => {
             socket.to(conversationId).emit('user_stop_typing', {
                 userId,
                 conversationId
@@ -159,17 +170,21 @@ const initSocket = (httpServer) => {
         });
 
         // ─── MARK READ ───────────────────────────────────
-        socket.on('mark_read', async ({ messageId, conversationId }) => {
+        socket.on('mark_read', async ({ messageId, conversationId }: { messageId: string; conversationId: string }) => {
             try {
                 const message = await Message.findById(messageId);
                 if (!message) return;
+
+                if (!message.readBy) {
+                    message.readBy = [];
+                }
 
                 const alreadyRead = message.readBy.some(
                     r => r.userId.toString() === userId
                 );
 
                 if (!alreadyRead) {
-                    message.readBy.push({ userId });
+                    message.readBy.push({ userId: socket.user!._id, readAt: new Date() });
                     await message.save();
                 }
 
@@ -177,27 +192,27 @@ const initSocket = (httpServer) => {
                 socket.to(conversationId).emit('message_read', {
                     messageId,
                     userId,
-                    username: socket.user.username
+                    username
                 });
 
-            } catch (err) {
+            } catch (err: any) {
                 socket.emit('error', { message: err.message });
             }
         });
 
         // ─── REACTION SYNC ───────────────────────────────
-        socket.on('message_reacted', ({ messageId, reactions, conversationId }) => {
+        socket.on('message_reacted', ({ messageId, reactions, conversationId }: { messageId: string; reactions: any[]; conversationId: string }) => {
             socket.to(conversationId).emit('reaction_updated', { messageId, reactions });
         });
 
         // ─── DELETE SYNC ─────────────────────────────────
-        socket.on('message_deleted', ({ messageId, conversationId, content }) => {
+        socket.on('message_deleted', ({ messageId, conversationId, content }: { messageId: string; conversationId: string; content?: string }) => {
             socket.to(conversationId).emit('message_deleted_sync', { messageId, content });
         });
 
         // ─── DISCONNECT ──────────────────────────────────
         socket.on('disconnect', async () => {
-            console.log(`User disconnected: ${socket.user.username}`);
+            console.log(`User disconnected: ${username}`);
 
             const socketIds = onlineUsers.get(userId);
             if (socketIds) {
@@ -214,7 +229,7 @@ const initSocket = (httpServer) => {
                     // Saare users ko batao
                     socket.broadcast.emit('user_offline', {
                         userId,
-                        username: socket.user.username,
+                        username,
                         lastSeen: new Date()
                     });
                 }
@@ -224,5 +239,3 @@ const initSocket = (httpServer) => {
 
     return io;
 };
-
-module.exports = { initSocket, onlineUsers };

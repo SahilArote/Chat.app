@@ -1,11 +1,13 @@
-const Conversation = require('../models/Conversation');
-const User = require('../models/User');
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/ApiError');
+import { Request, Response } from 'express';
+import Conversation from '../models/Conversation';
+import User from '../models/User';
+import asyncHandler from '../utils/asyncHandler';
+import ApiError from '../utils/ApiError';
 
 // @route  POST /api/conversations
 // @desc   DM create karo ya existing dhundo
-const createOrGetDM = asyncHandler(async (req, res) => {
+export const createOrGetDM = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new ApiError(401, 'Not authenticated');
     const { userId } = req.body;
 
     if (!userId) throw new ApiError(400, 'UserId is required');
@@ -29,12 +31,12 @@ const createOrGetDM = asyncHandler(async (req, res) => {
 
     // Nahi hai toh naya banao
     if (!conversation) {
-        conversation = await Conversation.create({
+        const newConv = await Conversation.create({
             type: 'dm',
             members: [req.user._id, userId]
         });
 
-        conversation = await Conversation.findById(conversation._id)
+        conversation = await Conversation.findById(newConv._id)
             .populate('members', 'username avatar status lastSeen')
             .populate('lastMessage');
     }
@@ -44,7 +46,8 @@ const createOrGetDM = asyncHandler(async (req, res) => {
 
 // @route  GET /api/conversations
 // @desc   Meri saari conversations fetch karo
-const getMyConversations = asyncHandler(async (req, res) => {
+export const getMyConversations = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new ApiError(401, 'Not authenticated');
     const conversations = await Conversation.find({
         members: req.user._id,
         deletedFor: { $ne: req.user._id }
@@ -58,12 +61,13 @@ const getMyConversations = asyncHandler(async (req, res) => {
 
 // @route  POST /api/conversations/group
 // @desc   Group chat banao
-const createGroup = asyncHandler(async (req, res) => {
+export const createGroup = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new ApiError(401, 'Not authenticated');
     const { name, members } = req.body;
 
     if (!name) throw new ApiError(400, 'Group name is required');
 
-    if (!members || members.length < 2) {
+    if (!members || !Array.isArray(members) || members.length < 2) {
         throw new ApiError(400, 'Group must have at least 2 other members');
     }
 
@@ -86,7 +90,8 @@ const createGroup = asyncHandler(async (req, res) => {
 
 // @route  GET /api/conversations/:id
 // @desc   Single conversation fetch karo
-const getConversationById = asyncHandler(async (req, res) => {
+export const getConversationById = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new ApiError(401, 'Not authenticated');
     const conversation = await Conversation.findOne({
         _id: req.params.id,
         members: req.user._id
@@ -104,7 +109,8 @@ const getConversationById = asyncHandler(async (req, res) => {
 
 // @route  PATCH /api/conversations/group/:id/add
 // @desc   Group mein member add karo
-const addMember = asyncHandler(async (req, res) => {
+export const addMember = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new ApiError(401, 'Not authenticated');
     const { userId } = req.body;
 
     const conversation = await Conversation.findById(req.params.id);
@@ -113,7 +119,7 @@ const addMember = asyncHandler(async (req, res) => {
     if (conversation.type !== 'group') throw new ApiError(400, 'Not a group');
 
     // Sirf admin add kar sakta hai
-    const isAdmin = conversation.admins.some(adminId => adminId.toString() === req.user._id.toString());
+    const isAdmin = conversation.admins?.some(adminId => adminId.toString() === req.user?._id.toString());
     if (!isAdmin) {
         throw new ApiError(403, 'Only admin can add members');
     }
@@ -135,7 +141,8 @@ const addMember = asyncHandler(async (req, res) => {
 
 // @route  PATCH /api/conversations/group/:id/remove
 // @desc   Group se member remove karo
-const removeMember = asyncHandler(async (req, res) => {
+export const removeMember = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new ApiError(401, 'Not authenticated');
     const { userId } = req.body;
 
     const conversation = await Conversation.findById(req.params.id);
@@ -143,7 +150,7 @@ const removeMember = asyncHandler(async (req, res) => {
     if (!conversation) throw new ApiError(404, 'Group not found');
 
     // Sirf admin remove kar sakta hai
-    const isAdmin = conversation.admins.some(adminId => adminId.toString() === req.user._id.toString());
+    const isAdmin = conversation.admins?.some(adminId => adminId.toString() === req.user?._id.toString());
     if (!isAdmin) {
         throw new ApiError(403, 'Only admin can remove members');
     }
@@ -166,7 +173,8 @@ const removeMember = asyncHandler(async (req, res) => {
 
 // @route  DELETE /api/conversations/:id
 // @desc   Conversation delete karo (sirf apne liye)
-const deleteConversation = asyncHandler(async (req, res) => {
+export const deleteConversation = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new ApiError(401, 'Not authenticated');
     const conversation = await Conversation.findOne({
         _id: req.params.id,
         members: req.user._id
@@ -175,7 +183,10 @@ const deleteConversation = asyncHandler(async (req, res) => {
     if (!conversation) throw new ApiError(404, 'Conversation not found');
 
     // Sirf apne liye delete karo
-    const alreadyDeleted = conversation.deletedFor.some(id => id.toString() === req.user._id.toString());
+    if (!conversation.deletedFor) {
+        conversation.deletedFor = [];
+    }
+    const alreadyDeleted = conversation.deletedFor.some(id => id.toString() === req.user?._id.toString());
     if (!alreadyDeleted) {
         conversation.deletedFor.push(req.user._id);
         await conversation.save();
@@ -183,13 +194,3 @@ const deleteConversation = asyncHandler(async (req, res) => {
 
     res.json({ success: true, message: 'Conversation deleted' });
 });
-
-module.exports = {
-    createOrGetDM,
-    getMyConversations,
-    createGroup,
-    getConversationById,
-    addMember,
-    removeMember,
-    deleteConversation
-};

@@ -1,10 +1,12 @@
-const User = require('../models/User');
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/ApiError');
+import { Request, Response } from 'express';
+import User from '../models/User';
+import asyncHandler from '../utils/asyncHandler';
+import ApiError from '../utils/ApiError';
 
 // @route   GET /api/users/search?q=sahil
-const searchUsers = asyncHandler(async (req, res) => {
-    const query = req.query.q;
+export const searchUsers = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new ApiError(401, 'Not authenticated');
+    const query = req.query.q as string | undefined;
 
     let users;
     if (!query || query.trim().length < 2) {
@@ -27,7 +29,7 @@ const searchUsers = asyncHandler(async (req, res) => {
 });
 
 // @route   GET /api/users/:id
-const getUserById = asyncHandler(async (req, res) => {
+export const getUserById = asyncHandler(async (req: Request, res: Response) => {
     const user = await User.findById(req.params.id)
         .select('username email avatar bio status lastSeen');
 
@@ -37,5 +39,3 @@ const getUserById = asyncHandler(async (req, res) => {
 
     res.json({ success: true, user });
 });
-
-module.exports = { searchUsers, getUserById };

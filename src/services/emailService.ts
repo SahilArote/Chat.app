@@ -1,5 +1,5 @@
-const nodemailer = require('nodemailer');
-const config = require('../config');
+import nodemailer from 'nodemailer';
+import config from '../config';
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -9,7 +9,7 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-const sendOTP = async (email, otp, username) => {
+export const sendOTP = async (email: string, otp: string, username: string): Promise<void> => {
     const mailOptions = {
         from: `"Pulse Chat" <${config.email.user}>`,
         to: email,
@@ -39,5 +39,3 @@ const sendOTP = async (email, otp, username) => {
 
     await transporter.sendMail(mailOptions);
 };
-
-module.exports = { sendOTP };

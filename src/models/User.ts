@@ -1,7 +1,37 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+import mongoose, { Document, Model, Schema, Types } from 'mongoose';
+import bcrypt from 'bcryptjs';
 
-const userSchema = new mongoose.Schema({
+export interface IOtp {
+    code?: string;
+    expiresAt?: Date;
+}
+
+export interface IUser {
+    username: string;
+    email: string;
+    password?: string;
+    avatar: string;
+    bio: string;
+    status: 'online' | 'offline';
+    lastSeen: Date;
+    isVerified: boolean;
+    otp?: IOtp | null;
+    fcmToken: string;
+    passwordChangedAt?: Date;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+export interface IUserMethods {
+    comparePassword(candidatePassword: string): Promise<boolean>;
+    passwordChangedAfter(tokenIssuedAt?: number): boolean;
+}
+
+export interface IUserDocument extends Document<Types.ObjectId>, IUser, IUserMethods {}
+
+export type UserModel = Model<IUserDocument, {}, IUserMethods>;
+
+const userSchema = new Schema<IUserDocument, UserModel, IUserMethods>({
     username: {
         type: String,
         required: [true, 'Username is required'],
@@ -42,8 +72,8 @@ const userSchema = new mongoose.Schema({
         default: Date.now
     },
     isVerified: {
-    type: Boolean,
-    default: false
+        type: Boolean,
+        default: false
     },
     otp: {
         code: String,
@@ -58,23 +88,23 @@ const userSchema = new mongoose.Schema({
 
 // Auto hash password before save
 userSchema.pre('save', async function() {
-    if (!this.isModified('password')) return;
+    if (!this.isModified('password') || !this.password) return;
     this.password = await bcrypt.hash(this.password, 10);
 });
 
 // Compare password method
-userSchema.methods.comparePassword = async function(candidatePassword) {
+userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+    if (!this.password) return false;
     return await bcrypt.compare(candidatePassword, this.password);
 };
 
 // Password changed after token issued?
-userSchema.methods.passwordChangedAfter = function(tokenIssuedAt) {
-    if (this.passwordChangedAt) {
+userSchema.methods.passwordChangedAfter = function(tokenIssuedAt?: number): boolean {
+    if (this.passwordChangedAt && tokenIssuedAt) {
         return this.passwordChangedAt.getTime() / 1000 > tokenIssuedAt;
     }
     return false;
 };
 
-
-
-module.exports = mongoose.model('User', userSchema);
+const User = mongoose.model<IUserDocument, UserModel>('User', userSchema);
+export default User;

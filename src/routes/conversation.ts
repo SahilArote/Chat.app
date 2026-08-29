@@ -1,6 +1,5 @@
-const express = require('express');
-const router = express.Router();
-const {
+import express from 'express';
+import {
     createOrGetDM,
     getMyConversations,
     createGroup,
@@ -8,8 +7,10 @@ const {
     addMember,
     removeMember,
     deleteConversation
-} = require('../controllers/conversationController');
-const { protect } = require('../middlewares/auth');
+} from '../controllers/conversationController';
+import { protect } from '../middlewares/auth';
+
+const router = express.Router();
 
 // Sab protected hain
 router.use(protect);
@@ -22,4 +23,4 @@ router.patch('/group/:id/add', addMember);
 router.patch('/group/:id/remove', removeMember);
 router.delete('/:id', deleteConversation);
 
-module.exports = router;
+export default router;

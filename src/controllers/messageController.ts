@@ -1,12 +1,15 @@
-const Message = require('../models/Message');
-const Conversation = require('../models/Conversation');
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/ApiError');
+import { Request, Response } from 'express';
+import { Types } from 'mongoose';
+import Message, { IMessageDocument } from '../models/Message';
+import Conversation from '../models/Conversation';
+import asyncHandler from '../utils/asyncHandler';
+import ApiError from '../utils/ApiError';
 
 // @route  POST /api/messages/:conversationId
 // @desc   Message bhejo
-const sendMessage = asyncHandler(async (req, res) => {
-    const { conversationId } = req.params;
+export const sendMessage = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new ApiError(401, 'Not authenticated');
+    const conversationId = req.params.conversationId as string;
     const { content, type = 'text', replyTo } = req.body;
 
     // Conversation exist karti hai aur user member hai?
@@ -23,8 +26,8 @@ const sendMessage = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Message content is required');
     }
 
-    const message = await Message.create({
-        conversationId,
+    const message: IMessageDocument = await Message.create({
+        conversationId: new Types.ObjectId(conversationId),
         senderId: req.user._id,
         type,
         content: content || '',
@@ -47,10 +50,11 @@ const sendMessage = asyncHandler(async (req, res) => {
 
 // @route  GET /api/messages/:conversationId
 // @desc   Messages fetch karo with pagination
-const getMessages = asyncHandler(async (req, res) => {
-    const { conversationId } = req.params;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 30;
+export const getMessages = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new ApiError(401, 'Not authenticated');
+    const conversationId = req.params.conversationId as string;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 30;
     const skip = (page - 1) * limit;
 
     // User is conversation ka member hai?
@@ -95,10 +99,9 @@ const getMessages = asyncHandler(async (req, res) => {
 
 // @route  DELETE /api/messages/:id
 // @desc   Message delete karo
-const deleteMessage = asyncHandler(async (req, res) => {
+export const deleteMessage = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new ApiError(401, 'Not authenticated');
     const { deleteFor } = req.query;
-    // deleteFor=me — sirf apne liye
-    // deleteFor=everyone — sabke liye
 
     const message = await Message.findById(req.params.id);
 
@@ -123,7 +126,10 @@ const deleteMessage = asyncHandler(async (req, res) => {
             throw new ApiError(404, 'Message not found');
         }
 
-        const alreadyDeleted = message.deletedFor.some(id => id.toString() === req.user._id.toString());
+        if (!message.deletedFor) {
+            message.deletedFor = [];
+        }
+        const alreadyDeleted = message.deletedFor.some(id => id.toString() === req.user?._id.toString());
         if (!alreadyDeleted) {
             message.deletedFor.push(req.user._id);
             await message.save();
@@ -135,15 +141,20 @@ const deleteMessage = asyncHandler(async (req, res) => {
 
 // @route  PATCH /api/messages/:id/react
 // @desc   Message pe reaction do
-const reactToMessage = asyncHandler(async (req, res) => {
+export const reactToMessage = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new ApiError(401, 'Not authenticated');
     const { emoji } = req.body;
 
     const message = await Message.findById(req.params.id);
     if (!message) throw new ApiError(404, 'Message not found');
 
+    if (!message.reactions) {
+        message.reactions = [];
+    }
+
     // Pehle se react kiya hua hai?
     const existingIndex = message.reactions.findIndex(
-        r => r.userId.toString() === req.user._id.toString()
+        r => r.userId.toString() === req.user?._id.toString()
     );
 
     if (existingIndex > -1) {
@@ -166,27 +177,24 @@ const reactToMessage = asyncHandler(async (req, res) => {
 
 // @route  PATCH /api/messages/:id/read
 // @desc   Message read mark karo
-const markAsRead = asyncHandler(async (req, res) => {
+export const markAsRead = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new ApiError(401, 'Not authenticated');
     const message = await Message.findById(req.params.id);
     if (!message) throw new ApiError(404, 'Message not found');
 
+    if (!message.readBy) {
+        message.readBy = [];
+    }
+
     // Pehle se read kiya hua?
     const alreadyRead = message.readBy.some(
-        r => r.userId.toString() === req.user._id.toString()
+        r => r.userId.toString() === req.user?._id.toString()
     );
 
     if (!alreadyRead) {
-        message.readBy.push({ userId: req.user._id });
+        message.readBy.push({ userId: req.user._id, readAt: new Date() });
         await message.save();
     }
 
     res.json({ success: true, message: 'Marked as read' });
 });
-
-module.exports = {
-    sendMessage,
-    getMessages,
-    deleteMessage,
-    reactToMessage,
-    markAsRead
-};
