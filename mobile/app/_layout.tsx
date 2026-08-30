@@ -42,6 +42,14 @@ export default function RootLayout() {
                             name="search"
                             options={{ headerShown: false, animation: 'fade' }}
                         />
+                        <Stack.Screen
+                            name="call/[callId]"
+                            options={{ headerShown: false, animation: 'slide_from_bottom' }}
+                        />
+                        <Stack.Screen
+                            name="call/incoming"
+                            options={{ headerShown: false, animation: 'fade' }}
+                        />
                     </Stack>
                 </AuthProvider>
             </SafeAreaProvider>

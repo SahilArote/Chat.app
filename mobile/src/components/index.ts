@@ -28,3 +28,4 @@ export * from './messages';
 export * from './groups';
 export * from './profile';
 export * from './search';
+export * from './calls';
