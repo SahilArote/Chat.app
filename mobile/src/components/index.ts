@@ -20,3 +20,7 @@ export * from './Chip';
 export * from './SearchBar';
 export * from './ConversationRow';
 export * from './ChatActionSheet';
+export * from './TypingIndicatorBubble';
+export * from './AttachmentPickerSheet';
+export * from './ScrollToBottomFab';
+export * from './MessageComposer';
