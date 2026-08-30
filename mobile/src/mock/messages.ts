@@ -1,4 +1,4 @@
-export type MessageType = 'text' | 'image' | 'audio' | 'file';
+export type MessageType = 'text' | 'image' | 'audio' | 'file' | 'system';
 
 export interface MockMessageReply {
     messageId: string;
@@ -25,7 +25,7 @@ export interface MockMessage {
     fileName?: string;
     audioDuration?: string;
     timestamp: string;
-    createdAt: string; // ISO date for date grouping
+    createdAt: string;
     status: 'sending' | 'sent' | 'delivered' | 'read';
     replyTo?: MockMessageReply;
     reactions?: MockMessageReaction[];
@@ -33,6 +33,17 @@ export interface MockMessage {
 
 export const mockMessages: Record<string, MockMessage[]> = {
     conv_1: [
+        {
+            id: 'msg_100',
+            conversationId: 'conv_1',
+            senderId: 'system',
+            senderName: 'System',
+            type: 'system',
+            text: '🔒 Messages and calls are end-to-end encrypted.',
+            timestamp: '12:38 PM',
+            createdAt: '2026-08-30T12:38:00Z',
+            status: 'read'
+        },
         {
             id: 'msg_101',
             conversationId: 'conv_1',
@@ -71,21 +82,45 @@ export const mockMessages: Record<string, MockMessage[]> = {
             mediaUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600',
             timestamp: '12:43 PM',
             createdAt: '2026-08-30T12:43:00Z',
-            status: 'read'
+            status: 'read',
+            reactions: [{ emoji: '❤️', count: 1, userReacted: false }]
         },
         {
             id: 'msg_104',
             conversationId: 'conv_1',
             senderId: 'user_alex',
             senderName: 'Alex Rivera',
-            type: 'text',
-            text: 'Check out the new haptic feedback animations!',
+            type: 'audio',
+            audioDuration: '0:18',
+            timestamp: '12:44 PM',
+            createdAt: '2026-08-30T12:44:00Z',
+            status: 'read'
+        },
+        {
+            id: 'msg_105',
+            conversationId: 'conv_1',
+            senderId: 'user_sahil',
+            senderName: 'Sahil Arote',
+            type: 'file',
+            fileName: 'Pulse_Architecture_v2.pdf',
+            fileSize: '2.4 MB',
             timestamp: '12:45 PM',
             createdAt: '2026-08-30T12:45:00Z',
             status: 'delivered'
         }
     ],
     conv_2: [
+        {
+            id: 'msg_200',
+            conversationId: 'conv_2',
+            senderId: 'system',
+            senderName: 'System',
+            type: 'system',
+            text: 'Sarah Jenkins created group "Pulse Engineering Core"',
+            timestamp: '09:55 AM',
+            createdAt: '2026-08-30T09:55:00Z',
+            status: 'read'
+        },
         {
             id: 'msg_201',
             conversationId: 'conv_2',

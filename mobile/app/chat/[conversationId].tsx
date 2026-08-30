@@ -3,7 +3,6 @@ import {
     View,
     StyleSheet,
     FlatList,
-    Image,
     TouchableOpacity,
     NativeSyntheticEvent,
     NativeScrollEvent
@@ -19,7 +18,10 @@ import {
     MessageComposer,
     TypingIndicatorBubble,
     AttachmentPickerSheet,
-    ScrollToBottomFab
+    ScrollToBottomFab,
+    MessageBubble,
+    MessageActionModal,
+    ImageLightboxModal
 } from '../../src/components';
 import { colors, spacing, radius } from '../../src/theme';
 import { MockMessage, MockMessageReply } from '../../src/mock/messages';
@@ -39,7 +41,11 @@ export default function ChatRoomScreen() {
     const [attachmentVisible, setAttachmentVisible] = useState(false);
     const [showScrollFab, setShowScrollFab] = useState(false);
 
-    // Load conversation metadata & message history
+    // Modal state for Action Sheet & Lightbox
+    const [selectedMessage, setSelectedMessage] = useState<MockMessage | null>(null);
+    const [actionModalVisible, setActionModalVisible] = useState(false);
+    const [lightboxImageUrl, setLightboxImageUrl] = useState<string | null>(null);
+
     const loadData = useCallback(async () => {
         if (!conversationId) return;
         const conv = await conversationRepository.getConversationById(conversationId);
@@ -64,12 +70,11 @@ export default function ChatRoomScreen() {
         setMessages((prev) => [...prev, sent]);
         setActiveReply(null);
 
-        // Auto-scroll to bottom
         setTimeout(() => {
             flatListRef.current?.scrollToEnd({ animated: true });
         }, 100);
 
-        // Simulate interactive typing & echo response after 1.2s
+        // Echo simulation
         setIsTyping(true);
         setTimeout(async () => {
             setIsTyping(false);
@@ -99,22 +104,27 @@ export default function ChatRoomScreen() {
         if (!conversationId) return;
         let attachText = '📎 Attachment';
         let mediaUrl: string | undefined;
+        let msgType: MockMessage['type'] = 'text';
 
         if (type === 'gallery') {
-            attachText = 'Shared a photo';
-            mediaUrl = 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600';
+            msgType = 'image';
+            attachText = 'Check out this screenshot!';
+            mediaUrl = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600';
         } else if (type === 'document') {
-            attachText = '📄 Project_Design_Spec_v2.pdf (1.4 MB)';
-        } else if (type === 'location') {
-            attachText = '📍 Shared Live Location';
-        } else if (type === 'contact') {
-            attachText = '👤 Contact: Sahil Arote (+91 9876543210)';
+            msgType = 'file';
+            attachText = 'Pulse_Spec_Document.pdf';
+        } else if (type === 'audio') {
+            msgType = 'audio';
+            attachText = '';
         }
 
         const msg = await messageRepository.sendMessage(conversationId, {
-            type: type === 'gallery' ? 'image' : 'text',
+            type: msgType,
             text: attachText,
-            mediaUrl
+            mediaUrl,
+            fileName: type === 'document' ? 'Pulse_Spec_Document.pdf' : undefined,
+            fileSize: type === 'document' ? '1.8 MB' : undefined,
+            audioDuration: type === 'audio' ? '0:15' : undefined
         });
 
         setMessages((prev) => [...prev, msg]);
@@ -129,17 +139,23 @@ export default function ChatRoomScreen() {
         setMessages((prev) => prev.map((m) => (m.id === msgId ? updated : m)));
     };
 
-    const renderDeliveryStatus = (status: MockMessage['status']) => {
-        switch (status) {
-            case 'read':
-                return <Ionicons name="checkmark-done" size={14} color="#FFFFFF" style={{ marginLeft: 3 }} />;
-            case 'delivered':
-                return <Ionicons name="checkmark-done" size={14} color="rgba(255,255,255,0.7)" style={{ marginLeft: 3 }} />;
-            case 'sent':
-                return <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.7)" style={{ marginLeft: 3 }} />;
-            case 'sending':
-                return <Ionicons name="time-outline" size={13} color="rgba(255,255,255,0.7)" style={{ marginLeft: 3 }} />;
-        }
+    const handleLongPressMessage = (msg: MockMessage) => {
+        setSelectedMessage(msg);
+        setActionModalVisible(true);
+    };
+
+    const handleReplyMessage = (msg: MockMessage) => {
+        setActiveReply({
+            messageId: msg.id,
+            senderName: msg.senderName,
+            text: msg.text || (msg.type === 'image' ? 'Photo' : 'Audio Note')
+        });
+    };
+
+    const handleDeleteMessage = async (msgId: string) => {
+        if (!conversationId) return;
+        await messageRepository.deleteMessage(conversationId, msgId);
+        setMessages((prev) => prev.filter((m) => m.id !== msgId));
     };
 
     return (
@@ -206,86 +222,15 @@ export default function ChatRoomScreen() {
                             </AppText>
                         </View>
                     }
-                    renderItem={({ item }) => {
-                        const isOutgoing = item.senderId === 'user_sahil';
-
-                        return (
-                            <View
-                                style={[
-                                    styles.messageRow,
-                                    isOutgoing ? styles.outgoingRow : styles.incomingRow
-                                ]}
-                            >
-                                <View
-                                    style={[
-                                        styles.bubble,
-                                        isOutgoing ? styles.outgoingBubble : styles.incomingBubble
-                                    ]}
-                                >
-                                    {/* Reply Quoted Preview */}
-                                    {item.replyTo && (
-                                        <View style={[styles.quotedContainer, isOutgoing && styles.quotedOutgoing]}>
-                                            <AppText variant="caption" color={isOutgoing ? '#FFFFFF' : colors.primary} weight="700">
-                                                {item.replyTo.senderName}
-                                            </AppText>
-                                            <AppText variant="caption" color={isOutgoing ? 'rgba(255,255,255,0.8)' : colors.textSecondary} numberOfLines={1}>
-                                                {item.replyTo.text}
-                                            </AppText>
-                                        </View>
-                                    )}
-
-                                    {/* Media Image */}
-                                    {item.mediaUrl && (
-                                        <Image
-                                            source={{ uri: item.mediaUrl }}
-                                            style={styles.bubbleImage}
-                                            resizeMode="cover"
-                                        />
-                                    )}
-
-                                    {/* Message Text */}
-                                    {item.text ? (
-                                        <AppText
-                                            variant="body"
-                                            color={isOutgoing ? '#FFFFFF' : colors.textPrimary}
-                                        >
-                                            {item.text}
-                                        </AppText>
-                                    ) : null}
-
-                                    {/* Timestamp & Delivery status */}
-                                    <View style={styles.bubbleFooter}>
-                                        <AppText
-                                            variant="caption"
-                                            color={isOutgoing ? 'rgba(255,255,255,0.7)' : colors.textMuted}
-                                            style={styles.timeText}
-                                        >
-                                            {item.timestamp}
-                                        </AppText>
-                                        {isOutgoing && renderDeliveryStatus(item.status)}
-                                    </View>
-
-                                    {/* Reactions Pill */}
-                                    {item.reactions && item.reactions.length > 0 && (
-                                        <View style={styles.reactionsRow}>
-                                            {item.reactions.map((r, i) => (
-                                                <TouchableOpacity
-                                                    key={i}
-                                                    style={[styles.reactionPill, r.userReacted && styles.reactionActive]}
-                                                    onPress={() => handleReaction(item.id, r.emoji)}
-                                                >
-                                                    <AppText style={{ fontSize: 11 }}>{r.emoji}</AppText>
-                                                    <AppText variant="caption" color={colors.textPrimary} style={{ marginLeft: 3 }}>
-                                                        {r.count}
-                                                    </AppText>
-                                                </TouchableOpacity>
-                                            ))}
-                                        </View>
-                                    )}
-                                </View>
-                            </View>
-                        );
-                    }}
+                    renderItem={({ item }) => (
+                        <MessageBubble
+                            message={item}
+                            currentUserId="user_sahil"
+                            onImagePress={(url) => setLightboxImageUrl(url)}
+                            onLongPress={handleLongPressMessage}
+                            onReactionPress={handleReaction}
+                        />
+                    )}
                     ListFooterComponent={isTyping ? <TypingIndicatorBubble /> : null}
                 />
 
@@ -306,6 +251,26 @@ export default function ChatRoomScreen() {
                 visible={attachmentVisible}
                 onClose={() => setAttachmentVisible(false)}
                 onSelectOption={handleSelectAttachment}
+            />
+
+            {/* ─── 5. MESSAGE LONG-PRESS ACTION MODAL ───────────────── */}
+            <MessageActionModal
+                message={selectedMessage}
+                visible={actionModalVisible}
+                onClose={() => setActionModalVisible(false)}
+                onReact={handleReaction}
+                onReply={handleReplyMessage}
+                onCopy={() => {}}
+                onForward={() => {}}
+                onStar={() => {}}
+                onDelete={handleDeleteMessage}
+            />
+
+            {/* ─── 6. FULLSCREEN IMAGE LIGHTBOX ─────────────────────── */}
+            <ImageLightboxModal
+                visible={!!lightboxImageUrl}
+                imageUrl={lightboxImageUrl}
+                onClose={() => setLightboxImageUrl(null)}
             />
         </Screen>
     );
@@ -332,8 +297,7 @@ const styles = StyleSheet.create({
         position: 'relative'
     },
     messageList: {
-        paddingHorizontal: spacing.md,
-        paddingBottom: spacing.md
+        paddingVertical: spacing.sm
     },
     dateBadge: {
         alignSelf: 'center',
@@ -344,78 +308,5 @@ const styles = StyleSheet.create({
         marginVertical: spacing.md,
         borderWidth: 1,
         borderColor: colors.border
-    },
-    messageRow: {
-        marginVertical: 4,
-        flexDirection: 'row'
-    },
-    incomingRow: {
-        justifyContent: 'flex-start'
-    },
-    outgoingRow: {
-        justifyContent: 'flex-end'
-    },
-    bubble: {
-        maxWidth: '82%',
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.lg
-    },
-    incomingBubble: {
-        backgroundColor: colors.messageIncoming,
-        borderBottomLeftRadius: 4,
-        borderWidth: 1,
-        borderColor: colors.border
-    },
-    outgoingBubble: {
-        backgroundColor: colors.messageOutgoing,
-        borderBottomRightRadius: 4
-    },
-    quotedContainer: {
-        backgroundColor: 'rgba(0,0,0,0.2)',
-        borderLeftWidth: 3,
-        borderLeftColor: colors.primary,
-        paddingHorizontal: spacing.xs + 2,
-        paddingVertical: 3,
-        borderRadius: 4,
-        marginBottom: spacing.xs
-    },
-    quotedOutgoing: {
-        borderLeftColor: '#FFFFFF',
-        backgroundColor: 'rgba(255,255,255,0.15)'
-    },
-    bubbleImage: {
-        width: 220,
-        height: 140,
-        borderRadius: radius.md,
-        marginBottom: spacing.xs
-    },
-    bubbleFooter: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        marginTop: 4
-    },
-    timeText: {
-        fontSize: 10
-    },
-    reactionsRow: {
-        flexDirection: 'row',
-        marginTop: 4,
-        gap: 4
-    },
-    reactionPill: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.surfaceElevated,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: radius.full,
-        borderWidth: 1,
-        borderColor: colors.border
-    },
-    reactionActive: {
-        borderColor: colors.primary,
-        backgroundColor: colors.primarySubtle
     }
 });

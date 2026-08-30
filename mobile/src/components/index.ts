@@ -24,3 +24,4 @@ export * from './TypingIndicatorBubble';
 export * from './AttachmentPickerSheet';
 export * from './ScrollToBottomFab';
 export * from './MessageComposer';
+export * from './messages';
