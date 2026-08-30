@@ -18,3 +18,5 @@ export * from './ErrorState';
 export * from './Switch';
 export * from './Chip';
 export * from './SearchBar';
+export * from './ConversationRow';
+export * from './ChatActionSheet';

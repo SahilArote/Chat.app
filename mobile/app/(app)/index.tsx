@@ -1,164 +1,352 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+    View,
+    StyleSheet,
+    FlatList,
+    RefreshControl,
+    ScrollView,
+    TouchableOpacity
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
     Screen,
-    Header,
     AppText,
+    AppIconButton,
     Avatar,
-    Badge,
     Chip,
-    AppIconButton
+    SearchBar,
+    EmptyState,
+    ConversationRow,
+    ChatActionSheet
 } from '../../src/components';
 import { colors, spacing, radius } from '../../src/theme';
+import { mockUsers } from '../../src/mock/users';
+import { MockConversation } from '../../src/mock/conversations';
+import conversationRepository from '../../src/repositories/ConversationRepository';
 
 export default function ChatsListScreen() {
     const router = useRouter();
     const [selectedFilter, setSelectedFilter] = useState('All');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [conversations, setConversations] = useState<MockConversation[]>([]);
+    const [refreshing, setRefreshing] = useState(false);
+    const [selectedConv, setSelectedConv] = useState<MockConversation | null>(null);
+    const [actionSheetVisible, setActionSheetVisible] = useState(false);
 
-    const mockChats = [
-        {
-            id: 'conv_1',
-            name: 'Sahil Arote',
-            lastMessage: 'Hey! The new Phase 3 navigation structure is live 🚀',
-            time: '12:45 PM',
-            unreadCount: 2,
-            online: true
-        },
-        {
-            id: 'conv_2',
-            name: 'Pulse Engineering Core',
-            lastMessage: 'Alex: React Native Reanimated gestures look super smooth!',
-            time: '11:30 AM',
-            unreadCount: 0,
-            online: false
-        },
-        {
-            id: 'conv_3',
-            name: 'Sarah Jenkins',
-            lastMessage: 'Let me know once the design freeze is ready.',
-            time: 'Yesterday',
-            unreadCount: 0,
-            online: true
+    const loadConversations = useCallback(async () => {
+        const list = await conversationRepository.getConversations(selectedFilter);
+        if (searchQuery.trim()) {
+            setConversations(
+                list.filter(
+                    (c) =>
+                        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+            );
+        } else {
+            setConversations(list);
         }
-    ];
+    }, [selectedFilter, searchQuery]);
+
+    useEffect(() => {
+        loadConversations();
+    }, [loadConversations]);
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await loadConversations();
+        setRefreshing(false);
+    };
+
+    const handleOpenChat = (conv: MockConversation) => {
+        router.push(`/chat/${conv.id}`);
+    };
+
+    const handleLongPress = (conv: MockConversation) => {
+        setSelectedConv(conv);
+        setActionSheetVisible(true);
+    };
+
+    const handleTogglePin = async (conv: MockConversation) => {
+        await conversationRepository.togglePin(conv.id);
+        loadConversations();
+    };
+
+    const handleToggleMute = async (conv: MockConversation) => {
+        await conversationRepository.toggleMute(conv.id);
+        loadConversations();
+    };
+
+    const handleToggleArchive = async (conv: MockConversation) => {
+        await conversationRepository.toggleArchive(conv.id);
+        loadConversations();
+    };
+
+    const handleMarkRead = async (conv: MockConversation) => {
+        await conversationRepository.markAsRead(conv.id);
+        loadConversations();
+    };
+
+    const handleDelete = async (conv: MockConversation) => {
+        await conversationRepository.deleteConversation(conv.id);
+        loadConversations();
+    };
+
+    const filters = ['All', 'Direct', 'Groups', 'Unread', 'Pinned'];
 
     return (
-        <Screen scrollable>
-            <Header
-                title="Pulse Chat"
-                showBack={false}
-                leftAction={
+        <Screen style={styles.container}>
+            {/* ─── 1. TOP BRAND HEADER ──────────────────────────────── */}
+            <View style={styles.header}>
+                <View style={styles.headerLeft}>
+                    <View style={styles.pulseLogoBadge}>
+                        <Ionicons name="chatbubble-ellipses" size={20} color={colors.primary} />
+                    </View>
+                    <View style={styles.headerText}>
+                        <AppText variant="screenTitle" color={colors.textPrimary} style={styles.brandTitle}>
+                            Pulse
+                        </AppText>
+                        <AppText variant="caption" color={colors.online} style={styles.onlineBadge}>
+                            ● Connected
+                        </AppText>
+                    </View>
+                </View>
+
+                <View style={styles.headerActions}>
                     <AppIconButton
                         icon={<Ionicons name="search-outline" size={20} color={colors.textPrimary} />}
                         onPress={() => router.push('/search')}
+                        variant="filled"
+                        style={styles.actionBtn}
                     />
-                }
-                rightAction={
                     <AppIconButton
-                        icon={<Ionicons name="add-circle-outline" size={24} color={colors.primary} />}
+                        icon={<Ionicons name="add" size={24} color="#FFFFFF" />}
                         onPress={() => router.push('/group/create')}
+                        variant="filled"
+                        style={[styles.actionBtn, styles.newChatBtn]}
+                    />
+                </View>
+            </View>
+
+            {/* ─── 2. ACTIVE CONTACTS STORY CAROUSEL ────────────────── */}
+            <View style={styles.storiesSection}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.storiesScroll}
+                >
+                    {/* Add story button */}
+                    <TouchableOpacity
+                        style={styles.storyItem}
+                        activeOpacity={0.7}
+                        onPress={() => router.push('/group/create')}
+                    >
+                        <View style={styles.addStoryCircle}>
+                            <Ionicons name="add" size={22} color={colors.primary} />
+                        </View>
+                        <AppText variant="caption" color={colors.textSecondary} style={styles.storyName}>
+                            New Group
+                        </AppText>
+                    </TouchableOpacity>
+
+                    {mockUsers.map((user) => (
+                        <TouchableOpacity
+                            key={user.id}
+                            style={styles.storyItem}
+                            activeOpacity={0.7}
+                            onPress={() => router.push(`/user/${user.id}`)}
+                        >
+                            <View style={[styles.avatarRing, user.status === 'online' && styles.avatarRingOnline]}>
+                                <Avatar
+                                    uri={user.avatar}
+                                    name={user.name}
+                                    size="md"
+                                    status={user.status}
+                                />
+                            </View>
+                            <AppText
+                                variant="caption"
+                                color={colors.textPrimary}
+                                numberOfLines={1}
+                                style={styles.storyName}
+                            >
+                                {user.name.split(' ')[0]}
+                            </AppText>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
+
+            {/* ─── 3. FILTER CHIPS ──────────────────────────────────── */}
+            <View style={styles.filterSection}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.filterScroll}
+                >
+                    {filters.map((filter) => (
+                        <Chip
+                            key={filter}
+                            label={filter}
+                            selected={selectedFilter === filter}
+                            onPress={() => setSelectedFilter(filter)}
+                        />
+                    ))}
+                </ScrollView>
+            </View>
+
+            {/* ─── 4. CONVERSATION FLATLIST ─────────────────────────── */}
+            <FlatList
+                data={conversations}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                    <ConversationRow
+                        conversation={item}
+                        onPress={handleOpenChat}
+                        onLongPress={handleLongPress}
+                    />
+                )}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor={colors.primary}
+                        colors={[colors.primary]}
                     />
                 }
+                ListEmptyComponent={
+                    <EmptyState
+                        icon="chatbubbles-outline"
+                        title="No Conversations Found"
+                        description={`There are no chats matching the "${selectedFilter}" category filter.`}
+                        actionTitle="Start New Chat"
+                        onAction={() => router.push('/group/create')}
+                        style={styles.emptyState}
+                    />
+                }
+                contentContainerStyle={conversations.length === 0 ? styles.emptyListContent : styles.listContent}
             />
 
-            {/* Filter Chips */}
-            <View style={styles.filterRow}>
-                {['All', 'Direct', 'Groups', 'Unread'].map((filter) => (
-                    <Chip
-                        key={filter}
-                        label={filter}
-                        selected={selectedFilter === filter}
-                        onPress={() => setSelectedFilter(filter)}
-                    />
-                ))}
-            </View>
-
-            {/* Conversation List */}
-            <View style={styles.chatList}>
-                {mockChats.map((chat) => (
-                    <TouchableOpacity
-                        key={chat.id}
-                        style={styles.chatItem}
-                        activeOpacity={0.75}
-                        onPress={() => router.push(`/chat/${chat.id}`)}
-                    >
-                        <Avatar
-                            name={chat.name}
-                            size="md"
-                            status={chat.online ? 'online' : 'offline'}
-                        />
-
-                        <View style={styles.chatInfo}>
-                            <View style={styles.chatHeader}>
-                                <AppText variant="chatName" numberOfLines={1} style={styles.name}>
-                                    {chat.name}
-                                </AppText>
-                                <AppText variant="caption" color={colors.textMuted}>
-                                    {chat.time}
-                                </AppText>
-                            </View>
-
-                            <View style={styles.chatFooter}>
-                                <AppText
-                                    variant="bodySmall"
-                                    color={chat.unreadCount > 0 ? colors.textPrimary : colors.textSecondary}
-                                    numberOfLines={1}
-                                    style={styles.lastMessage}
-                                >
-                                    {chat.lastMessage}
-                                </AppText>
-
-                                {chat.unreadCount > 0 && <Badge count={chat.unreadCount} />}
-                            </View>
-                        </View>
-                    </TouchableOpacity>
-                ))}
-            </View>
+            {/* ─── 5. LONG PRESS CHAT ACTION SHEET ─────────────────── */}
+            <ChatActionSheet
+                conversation={selectedConv}
+                visible={actionSheetVisible}
+                onClose={() => setActionSheetVisible(false)}
+                onTogglePin={handleTogglePin}
+                onToggleMute={handleToggleMute}
+                onToggleArchive={handleToggleArchive}
+                onMarkRead={handleMarkRead}
+                onDelete={handleDelete}
+            />
         </Screen>
     );
 }
 
 const styles = StyleSheet.create({
-    filterRow: {
-        flexDirection: 'row',
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.md,
-        gap: spacing.sm
+    container: {
+        flex: 1
     },
-    chatList: {
-        paddingHorizontal: spacing.md
-    },
-    chatItem: {
+    header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: spacing.md,
-        paddingHorizontal: spacing.sm,
+        justifyContent: 'space-between',
+        paddingHorizontal: spacing.lg,
+        paddingTop: spacing.sm,
+        paddingBottom: spacing.sm
+    },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center'
+    },
+    pulseLogoBadge: {
+        width: 36,
+        height: 36,
         borderRadius: radius.md,
+        backgroundColor: colors.surfaceElevated,
+        borderWidth: 1,
+        borderColor: colors.border,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: spacing.sm
+    },
+    headerText: {
+        justifyContent: 'center'
+    },
+    brandTitle: {
+        fontWeight: '800',
+        lineHeight: 22
+    },
+    onlineBadge: {
+        fontSize: 10,
+        fontWeight: '600',
+        lineHeight: 12
+    },
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.xs
+    },
+    actionBtn: {
+        width: 38,
+        height: 38
+    },
+    newChatBtn: {
+        backgroundColor: colors.primary
+    },
+    storiesSection: {
+        paddingVertical: spacing.xs,
         borderBottomWidth: 1,
         borderBottomColor: colors.border
     },
-    chatInfo: {
-        flex: 1,
-        marginLeft: spacing.md
-    },
-    chatHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 4
-    },
-    name: {
-        fontWeight: '600'
-    },
-    chatFooter: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    storiesScroll: {
+        paddingHorizontal: spacing.lg,
+        gap: spacing.md,
         alignItems: 'center'
     },
-    lastMessage: {
-        flex: 1,
-        marginRight: spacing.sm
+    storyItem: {
+        alignItems: 'center',
+        width: 58
+    },
+    addStoryCircle: {
+        width: 48,
+        height: 48,
+        borderRadius: radius.full,
+        backgroundColor: colors.surfaceElevated,
+        borderWidth: 1.5,
+        borderColor: colors.border,
+        borderStyle: 'dashed',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 4
+    },
+    avatarRing: {
+        padding: 2,
+        borderRadius: radius.full
+    },
+    avatarRingOnline: {
+        borderWidth: 1.5,
+        borderColor: colors.primary
+    },
+    storyName: {
+        fontSize: 11,
+        marginTop: 2
+    },
+    filterSection: {
+        paddingVertical: spacing.sm
+    },
+    filterScroll: {
+        paddingHorizontal: spacing.lg,
+        gap: spacing.xs
+    },
+    listContent: {
+        paddingBottom: spacing['4xl']
+    },
+    emptyListContent: {
+        flexGrow: 1,
+        justifyContent: 'center'
+    },
+    emptyState: {
+        paddingVertical: spacing['3xl']
     }
 });
