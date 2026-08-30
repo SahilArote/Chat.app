@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Screen, Header, AppText, AppInput, AppButton } from '../../src/components';
+import { Screen, Header, AppText, AppInput, AppButton, Toast } from '../../src/components';
 import { colors, spacing } from '../../src/theme';
 import { useAuth } from '../../src/context/AuthContext';
 
@@ -11,10 +11,40 @@ export default function LoginScreen() {
     const { login } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [emailError, setEmailError] = useState('');
+    const [passwordError, setPasswordError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
 
     const handleLogin = () => {
-        login(email);
-        router.replace('/(app)');
+        let valid = true;
+        setEmailError('');
+        setPasswordError('');
+
+        if (!email.trim()) {
+            setEmailError('Email is required');
+            valid = false;
+        } else if (!/\S+@\S+\.\S+/.test(email)) {
+            setEmailError('Please enter a valid email address');
+            valid = false;
+        }
+
+        if (!password) {
+            setPasswordError('Password is required');
+            valid = false;
+        } else if (password.length < 6) {
+            setPasswordError('Password must be at least 6 characters');
+            valid = false;
+        }
+
+        if (!valid) return;
+
+        setLoading(true);
+        setTimeout(() => {
+            setLoading(false);
+            login(email);
+            router.replace('/(app)');
+        }, 600);
     };
 
     return (
@@ -26,16 +56,25 @@ export default function LoginScreen() {
                     Welcome Back
                 </AppText>
                 <AppText variant="body" color={colors.textSecondary} style={styles.subtitle}>
-                    Sign in with your email to continue your conversations.
+                    Enter your email and password to access your Pulse conversations.
                 </AppText>
+
+                {toastMessage ? (
+                    <Toast type="error" message={toastMessage} style={{ marginBottom: spacing.lg }} />
+                ) : null}
 
                 <AppInput
                     label="Email Address"
                     placeholder="name@example.com"
                     value={email}
-                    onChangeText={setEmail}
+                    onChangeText={(val) => {
+                        setEmail(val);
+                        if (emailError) setEmailError('');
+                    }}
+                    error={emailError}
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    autoCorrect={false}
                     leftIcon={<Ionicons name="mail-outline" size={18} color={colors.textSecondary} />}
                 />
 
@@ -43,7 +82,11 @@ export default function LoginScreen() {
                     label="Password"
                     placeholder="Enter your password"
                     value={password}
-                    onChangeText={setPassword}
+                    onChangeText={(val) => {
+                        setPassword(val);
+                        if (passwordError) setPasswordError('');
+                    }}
+                    error={passwordError}
                     isPassword
                     leftIcon={<Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} />}
                 />
@@ -62,6 +105,7 @@ export default function LoginScreen() {
                     title="Sign In"
                     size="lg"
                     fullWidth
+                    loading={loading}
                     onPress={handleLogin}
                     style={styles.submitBtn}
                 />
