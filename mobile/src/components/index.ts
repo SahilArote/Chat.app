@@ -24,6 +24,7 @@ export * from './TypingIndicatorBubble';
 export * from './AttachmentPickerSheet';
 export * from './ScrollToBottomFab';
 export * from './MessageComposer';
+export * from './KeyboardAvoidingWrapper';
 export * from './messages';
 export * from './groups';
 export * from './profile';

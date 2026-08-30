@@ -24,7 +24,8 @@ import {
     ImageLightboxModal,
     ChatRoomSkeleton,
     PermissionPromptModal,
-    PermissionType
+    PermissionType,
+    KeyboardAvoidingWrapper
 } from '../../src/components';
 import { colors, spacing, radius } from '../../src/theme';
 import { MockMessage, MockMessageReply } from '../../src/mock/messages';
@@ -185,96 +186,102 @@ export default function ChatRoomScreen() {
 
     return (
         <Screen style={styles.container}>
-            {/* ─── 1. CHAT HEADER ───────────────────────────────────── */}
-            <Header
-                showBack
-                title=""
-                centerComponent={
-                    <TouchableOpacity
-                        style={styles.headerCenter}
-                        activeOpacity={0.7}
-                        onPress={() => {
-                            if (conversation?.type === 'group') {
-                                router.push(`/group/${conversation.id}`);
-                            } else {
-                                router.push(`/user/user_sahil`);
-                            }
-                        }}
-                    >
-                        <Avatar
-                            uri={conversation?.avatar}
-                            name={conversation?.name || 'Chat'}
-                            size="sm"
-                            status={conversation?.type === 'direct' ? 'online' : undefined}
-                        />
-                        <View style={styles.headerText}>
-                            <AppText variant="chatName" color={colors.textPrimary} numberOfLines={1}>
-                                {conversation?.name || 'Pulse Chat'}
-                            </AppText>
-                            <AppText variant="caption" color={isTyping ? colors.online : colors.textMuted}>
-                                {isTyping ? 'typing...' : conversation?.type === 'group' ? 'Tap for group info' : 'Online'}
-                            </AppText>
-                        </View>
-                    </TouchableOpacity>
-                }
-                rightAction={
-                    <View style={styles.headerRight}>
-                        <AppIconButton
-                            icon={<Ionicons name="videocam-outline" size={20} color={colors.textPrimary} />}
-                            onPress={() => handleStartCall('video')}
-                        />
-                        <AppIconButton
-                            icon={<Ionicons name="call-outline" size={20} color={colors.textPrimary} />}
-                            onPress={() => handleStartCall('audio')}
-                        />
-                    </View>
-                }
-            />
-
-            {/* ─── 2. MESSAGE STREAM / SKELETON ─────────────────────── */}
-            <View style={styles.chatBody}>
-                {loading ? (
-                    <ChatRoomSkeleton />
-                ) : (
-                    <FlatList
-                        ref={flatListRef}
-                        data={messages}
-                        keyExtractor={(item) => item.id}
-                        onScroll={handleScroll}
-                        scrollEventThrottle={16}
-                        contentContainerStyle={styles.messageList}
-                        ListHeaderComponent={
-                            <View style={styles.dateBadge}>
-                                <AppText variant="caption" color={colors.textMuted} weight="600">
-                                    TODAY
+            <KeyboardAvoidingWrapper style={styles.container} offset={10}>
+                {/* ─── 1. CHAT HEADER ───────────────────────────────────── */}
+                <Header
+                    showBack
+                    title=""
+                    centerComponent={
+                        <TouchableOpacity
+                            style={styles.headerCenter}
+                            activeOpacity={0.7}
+                            onPress={() => {
+                                if (conversation?.type === 'group') {
+                                    router.push(`/group/${conversation.id}`);
+                                } else {
+                                    router.push(`/user/user_sahil`);
+                                }
+                            }}
+                        >
+                            <Avatar
+                                uri={conversation?.avatar}
+                                name={conversation?.name || 'Chat'}
+                                size="sm"
+                                status={conversation?.type === 'direct' ? 'online' : undefined}
+                            />
+                            <View style={styles.headerText}>
+                                <AppText variant="chatName" color={colors.textPrimary} numberOfLines={1}>
+                                    {conversation?.name || 'Pulse Chat'}
+                                </AppText>
+                                <AppText variant="caption" color={isTyping ? colors.online : colors.textMuted}>
+                                    {isTyping ? 'typing...' : conversation?.type === 'group' ? 'Tap for group info' : 'Online'}
                                 </AppText>
                             </View>
-                        }
-                        renderItem={({ item }) => (
-                            <MessageBubble
-                                message={item}
-                                currentUserId="user_sahil"
-                                onImagePress={(url) => setLightboxImageUrl(url)}
-                                onLongPress={handleLongPressMessage}
-                                onReactionPress={handleReaction}
-                                onSwipeReply={handleReplyMessage}
+                        </TouchableOpacity>
+                    }
+                    rightAction={
+                        <View style={styles.headerRight}>
+                            <AppIconButton
+                                icon={<Ionicons name="videocam-outline" size={20} color={colors.textPrimary} />}
+                                onPress={() => handleStartCall('video')}
+                                accessibilityLabel="Start video call"
                             />
-                        )}
-                        ListFooterComponent={isTyping ? <TypingIndicatorBubble /> : null}
-                    />
-                )}
+                            <AppIconButton
+                                icon={<Ionicons name="call-outline" size={20} color={colors.textPrimary} />}
+                                onPress={() => handleStartCall('audio')}
+                                accessibilityLabel="Start audio call"
+                            />
+                        </View>
+                    }
+                />
 
-                {/* Floating Scroll-To-Bottom FAB */}
-                <ScrollToBottomFab visible={showScrollFab} onPress={scrollToBottom} />
-            </View>
+                {/* ─── 2. MESSAGE STREAM / SKELETON ─────────────────────── */}
+                <View style={styles.chatBody}>
+                    {loading ? (
+                        <ChatRoomSkeleton />
+                    ) : (
+                        <FlatList
+                            ref={flatListRef}
+                            data={messages}
+                            keyExtractor={(item) => item.id}
+                            onScroll={handleScroll}
+                            scrollEventThrottle={16}
+                            keyboardDismissMode="on-drag"
+                            keyboardShouldPersistTaps="handled"
+                            contentContainerStyle={styles.messageList}
+                            ListHeaderComponent={
+                                <View style={styles.dateBadge}>
+                                    <AppText variant="caption" color={colors.textMuted} weight="600">
+                                        TODAY
+                                    </AppText>
+                                </View>
+                            }
+                            renderItem={({ item }) => (
+                                <MessageBubble
+                                    message={item}
+                                    currentUserId="user_sahil"
+                                    onImagePress={(url) => setLightboxImageUrl(url)}
+                                    onLongPress={handleLongPressMessage}
+                                    onReactionPress={handleReaction}
+                                    onSwipeReply={handleReplyMessage}
+                                />
+                            )}
+                            ListFooterComponent={isTyping ? <TypingIndicatorBubble /> : null}
+                        />
+                    )}
 
-            {/* ─── 3. MESSAGE COMPOSER ──────────────────────────────── */}
-            <MessageComposer
-                replyTo={activeReply}
-                onCancelReply={() => setActiveReply(null)}
-                onSendMessage={handleSendMessage}
-                onOpenAttachments={() => setAttachmentVisible(true)}
-            />
+                    {/* Floating Scroll-To-Bottom FAB */}
+                    <ScrollToBottomFab visible={showScrollFab} onPress={scrollToBottom} />
+                </View>
+
+                {/* ─── 3. MESSAGE COMPOSER ──────────────────────────────── */}
+                <MessageComposer
+                    replyTo={activeReply}
+                    onCancelReply={() => setActiveReply(null)}
+                    onSendMessage={handleSendMessage}
+                    onOpenAttachments={() => setAttachmentVisible(true)}
+                />
+            </KeyboardAvoidingWrapper>
 
             {/* ─── 4. ATTACHMENT PICKER MODAL ───────────────────────── */}
             <AttachmentPickerSheet

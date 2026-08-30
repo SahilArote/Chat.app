@@ -7,6 +7,7 @@ import {
     ViewStyle
 } from 'react-native';
 import { colors, spacing, radius } from '../theme';
+import { getHitSlop } from '../utils/responsive';
 import AppText from './AppText';
 
 export interface AppIconButtonProps extends TouchableOpacityProps {
@@ -15,6 +16,7 @@ export interface AppIconButtonProps extends TouchableOpacityProps {
     variant?: 'ghost' | 'filled' | 'elevated' | 'danger';
     badgeCount?: number;
     disabled?: boolean;
+    accessibilityLabel?: string;
 }
 
 export const AppIconButton: React.FC<AppIconButtonProps> = ({
@@ -23,6 +25,7 @@ export const AppIconButton: React.FC<AppIconButtonProps> = ({
     variant = 'ghost',
     badgeCount,
     disabled = false,
+    accessibilityLabel,
     style,
     ...props
 }) => {
@@ -64,7 +67,9 @@ export const AppIconButton: React.FC<AppIconButtonProps> = ({
             ]}
             activeOpacity={0.7}
             disabled={disabled}
+            hitSlop={getHitSlop(dim)}
             accessibilityRole="button"
+            accessibilityLabel={accessibilityLabel}
             {...props}
         >
             {icon}
