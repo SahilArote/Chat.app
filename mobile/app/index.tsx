@@ -1,46 +1,83 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, radius } from '../src/theme';
+import { colors, typography, spacing, radius, shadows } from '../src/theme';
 
-export default function HomeScreen() {
+export default function DesignSystemScreen() {
     return (
         <SafeAreaView style={styles.safeArea}>
-            <View style={styles.container}>
-                {/* Brand Badge */}
+            <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+                {/* Header Badge */}
                 <View style={styles.badge}>
                     <View style={styles.pulseDot} />
-                    <Text style={styles.badgeText}>PHASE 0 FOUNDATION</Text>
+                    <Text style={styles.badgeText}>PHASE 1 DESIGN SYSTEM</Text>
                 </View>
 
-                {/* Main Hero Header */}
-                <Text style={styles.title}>Pulse Chat</Text>
-                <Text style={styles.subtitle}>
-                    Design-First Mobile Architecture
-                </Text>
+                <Text style={styles.displayHeading}>Pulse Theme</Text>
+                <Text style={styles.subtitle}>Single Source of Truth for Design Tokens</Text>
 
-                {/* Status Card */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>System Readiness</Text>
-                    <View style={styles.statusRow}>
-                        <Text style={styles.statusLabel}>• Expo Engine:</Text>
-                        <Text style={styles.statusValue}>SDK 54 (TypeScript)</Text>
-                    </View>
-                    <View style={styles.statusRow}>
-                        <Text style={styles.statusLabel}>• Navigation:</Text>
-                        <Text style={styles.statusValue}>Expo Router Active</Text>
-                    </View>
-                    <View style={styles.statusRow}>
-                        <Text style={styles.statusLabel}>• Gestures & Motion:</Text>
-                        <Text style={styles.statusValue}>Reanimated Ready</Text>
-                    </View>
-                    <View style={styles.statusRow}>
-                        <Text style={styles.statusLabel}>• Backend State:</Text>
-                        <Text style={styles.statusValueSuccess}>Offline / Mock Isolated</Text>
+                {/* ─── COLOR PALETTE ─────────────────────────────── */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>1. Color Palette Tokens</Text>
+                    <View style={styles.paletteGrid}>
+                        <ColorChip name="primary" color={colors.primary} />
+                        <ColorChip name="primaryPressed" color={colors.primaryPressed} />
+                        <ColorChip name="background" color={colors.background} border />
+                        <ColorChip name="surface" color={colors.surface} border />
+                        <ColorChip name="surfaceElevated" color={colors.surfaceElevated} />
+                        <ColorChip name="msgIncoming" color={colors.messageIncoming} />
+                        <ColorChip name="msgOutgoing" color={colors.messageOutgoing} />
+                        <ColorChip name="online / success" color={colors.online} />
+                        <ColorChip name="warning" color={colors.warning} />
+                        <ColorChip name="error" color={colors.error} />
                     </View>
                 </View>
-            </View>
+
+                {/* ─── TYPOGRAPHY HIERARCHY ───────────────────────── */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>2. Typography Scale</Text>
+                    <View style={styles.card}>
+                        <Text style={[typography.display, { color: colors.textPrimary }]}>Display (32px / 800)</Text>
+                        <Text style={[typography.screenTitle, { color: colors.textPrimary, marginTop: spacing.xs }]}>Screen Title (24px / 700)</Text>
+                        <Text style={[typography.sectionTitle, { color: colors.primary, marginTop: spacing.xs }]}>Section Title (18px / 600)</Text>
+                        <Text style={[typography.chatName, { color: colors.textPrimary, marginTop: spacing.xs }]}>Chat Name (16px / 600)</Text>
+                        <Text style={[typography.body, { color: colors.textSecondary, marginTop: spacing.xs }]}>Body (15px / 400) — Fast, fluid messaging for Pulse Chat</Text>
+                        <Text style={[typography.bodySmall, { color: colors.textSecondary, marginTop: spacing.xs }]}>Body Small (13px / 400)</Text>
+                        <Text style={[typography.label, { color: colors.textPrimary, marginTop: spacing.xs }]}>LABEL (12px / 600 uppercase)</Text>
+                        <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.xs }]}>Caption (11px / 400) • 12:45 PM • Read</Text>
+                    </View>
+                </View>
+
+                {/* ─── ELEVATION & RADIUS ─────────────────────────── */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>3. Elevation & Radius Tokens</Text>
+                    <View style={styles.elevationRow}>
+                        <View style={[styles.elevationBox, shadows.sm, { borderRadius: radius.sm }]}>
+                            <Text style={styles.elevationText}>Radius SM</Text>
+                            <Text style={styles.elevationSub}>Shadow SM</Text>
+                        </View>
+                        <View style={[styles.elevationBox, shadows.md, { borderRadius: radius.md }]}>
+                            <Text style={styles.elevationText}>Radius MD</Text>
+                            <Text style={styles.elevationSub}>Shadow MD</Text>
+                        </View>
+                        <View style={[styles.elevationBox, shadows.lg, { borderRadius: radius.lg }]}>
+                            <Text style={styles.elevationText}>Radius LG</Text>
+                            <Text style={styles.elevationSub}>Shadow LG</Text>
+                        </View>
+                    </View>
+                </View>
+            </ScrollView>
         </SafeAreaView>
+    );
+}
+
+function ColorChip({ name, color, border }: { name: string; color: string; border?: boolean }) {
+    return (
+        <View style={styles.chipWrapper}>
+            <View style={[styles.chipBox, { backgroundColor: color }, border && styles.chipBorder]} />
+            <Text style={styles.chipName} numberOfLines={1}>{name}</Text>
+            <Text style={styles.chipHex}>{color.toUpperCase()}</Text>
+        </View>
     );
 }
 
@@ -49,13 +86,12 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: colors.background
     },
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: spacing['2xl']
+    scrollContainer: {
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.xl
     },
     badge: {
+        alignSelf: 'flex-start',
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: colors.surfaceElevated,
@@ -64,7 +100,7 @@ const styles = StyleSheet.create({
         borderRadius: radius.full,
         borderWidth: 1,
         borderColor: colors.border,
-        marginBottom: spacing.lg
+        marginBottom: spacing.sm
     },
     pulseDot: {
         width: 8,
@@ -79,51 +115,81 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         letterSpacing: 0.5
     },
-    title: {
-        color: colors.textPrimary,
-        fontSize: 32,
-        fontWeight: '800',
-        letterSpacing: -0.5,
-        marginBottom: spacing.xs
+    displayHeading: {
+        ...typography.display,
+        color: colors.textPrimary
     },
     subtitle: {
+        ...typography.body,
         color: colors.textSecondary,
-        fontSize: 15,
-        textAlign: 'center',
-        marginBottom: spacing['3xl']
+        marginBottom: spacing.xl
+    },
+    section: {
+        marginBottom: spacing['2xl']
+    },
+    sectionTitle: {
+        ...typography.sectionTitle,
+        color: colors.textPrimary,
+        marginBottom: spacing.md
     },
     card: {
-        width: '100%',
         backgroundColor: colors.surface,
         borderRadius: radius.lg,
         borderWidth: 1,
         borderColor: colors.border,
-        padding: spacing.xl
+        padding: spacing.lg
     },
-    cardTitle: {
-        color: colors.textPrimary,
-        fontSize: 16,
-        fontWeight: '700',
-        marginBottom: spacing.md
+    paletteGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: spacing.sm
     },
-    statusRow: {
+    chipWrapper: {
+        width: '48%',
+        backgroundColor: colors.surface,
+        borderRadius: radius.md,
+        padding: spacing.sm,
+        borderWidth: 1,
+        borderColor: colors.border
+    },
+    chipBox: {
+        height: 38,
+        borderRadius: radius.sm,
+        marginBottom: spacing.xs
+    },
+    chipBorder: {
+        borderWidth: 1,
+        borderColor: colors.borderLight
+    },
+    chipName: {
+        ...typography.label,
+        color: colors.textPrimary
+    },
+    chipHex: {
+        ...typography.caption,
+        color: colors.textMuted
+    },
+    elevationRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        gap: spacing.sm
+    },
+    elevationBox: {
+        flex: 1,
+        backgroundColor: colors.surfaceElevated,
+        padding: spacing.md,
         alignItems: 'center',
-        paddingVertical: spacing.xs + 2
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: colors.border
     },
-    statusLabel: {
+    elevationText: {
+        ...typography.label,
+        color: colors.textPrimary
+    },
+    elevationSub: {
+        ...typography.caption,
         color: colors.textSecondary,
-        fontSize: 13
-    },
-    statusValue: {
-        color: colors.textPrimary,
-        fontSize: 13,
-        fontWeight: '600'
-    },
-    statusValueSuccess: {
-        color: colors.success,
-        fontSize: 13,
-        fontWeight: '600'
+        marginTop: 2
     }
 });
