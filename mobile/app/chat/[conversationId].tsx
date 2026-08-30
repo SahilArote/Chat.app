@@ -21,7 +21,10 @@ import {
     ScrollToBottomFab,
     MessageBubble,
     MessageActionModal,
-    ImageLightboxModal
+    ImageLightboxModal,
+    ChatRoomSkeleton,
+    PermissionPromptModal,
+    PermissionType
 } from '../../src/components';
 import { colors, spacing, radius } from '../../src/theme';
 import { MockMessage, MockMessageReply } from '../../src/mock/messages';
@@ -36,23 +39,28 @@ export default function ChatRoomScreen() {
 
     const [conversation, setConversation] = useState<MockConversation | null>(null);
     const [messages, setMessages] = useState<MockMessage[]>([]);
+    const [loading, setLoading] = useState(true);
     const [isTyping, setIsTyping] = useState(false);
     const [activeReply, setActiveReply] = useState<MockMessageReply | null>(null);
     const [attachmentVisible, setAttachmentVisible] = useState(false);
     const [showScrollFab, setShowScrollFab] = useState(false);
 
-    // Modal state for Action Sheet & Lightbox
+    // Modal state for Action Sheet, Lightbox, and Permissions
     const [selectedMessage, setSelectedMessage] = useState<MockMessage | null>(null);
     const [actionModalVisible, setActionModalVisible] = useState(false);
     const [lightboxImageUrl, setLightboxImageUrl] = useState<string | null>(null);
+    const [permissionModalVisible, setPermissionModalVisible] = useState(false);
+    const [permissionType, setPermissionType] = useState<PermissionType>('camera');
 
     const loadData = useCallback(async () => {
         if (!conversationId) return;
+        setLoading(true);
         const conv = await conversationRepository.getConversationById(conversationId);
         if (conv) setConversation(conv);
 
         const list = await messageRepository.getMessages(conversationId);
         setMessages(list);
+        setLoading(false);
     }, [conversationId]);
 
     useEffect(() => {
@@ -102,6 +110,12 @@ export default function ChatRoomScreen() {
 
     const handleSelectAttachment = async (type: string) => {
         if (!conversationId) return;
+        if (type === 'camera') {
+            setPermissionType('camera');
+            setPermissionModalVisible(true);
+            return;
+        }
+
         let attachText = '📎 Attachment';
         let mediaUrl: string | undefined;
         let msgType: MockMessage['type'] = 'text';
@@ -158,6 +172,17 @@ export default function ChatRoomScreen() {
         setMessages((prev) => prev.filter((m) => m.id !== msgId));
     };
 
+    const handleStartCall = (type: 'audio' | 'video') => {
+        router.push({
+            pathname: '/call/[callId]',
+            params: {
+                callId: `call_${Date.now()}`,
+                type,
+                contactName: conversation?.name || 'Pulse Chat'
+            }
+        });
+    };
+
     return (
         <Screen style={styles.container}>
             {/* ─── 1. CHAT HEADER ───────────────────────────────────── */}
@@ -196,43 +221,47 @@ export default function ChatRoomScreen() {
                     <View style={styles.headerRight}>
                         <AppIconButton
                             icon={<Ionicons name="videocam-outline" size={20} color={colors.textPrimary} />}
-                            onPress={() => {}}
+                            onPress={() => handleStartCall('video')}
                         />
                         <AppIconButton
                             icon={<Ionicons name="call-outline" size={20} color={colors.textPrimary} />}
-                            onPress={() => {}}
+                            onPress={() => handleStartCall('audio')}
                         />
                     </View>
                 }
             />
 
-            {/* ─── 2. MESSAGE STREAM ────────────────────────────────── */}
+            {/* ─── 2. MESSAGE STREAM / SKELETON ─────────────────────── */}
             <View style={styles.chatBody}>
-                <FlatList
-                    ref={flatListRef}
-                    data={messages}
-                    keyExtractor={(item) => item.id}
-                    onScroll={handleScroll}
-                    scrollEventThrottle={16}
-                    contentContainerStyle={styles.messageList}
-                    ListHeaderComponent={
-                        <View style={styles.dateBadge}>
-                            <AppText variant="caption" color={colors.textMuted} weight="600">
-                                TODAY
-                            </AppText>
-                        </View>
-                    }
-                    renderItem={({ item }) => (
-                        <MessageBubble
-                            message={item}
-                            currentUserId="user_sahil"
-                            onImagePress={(url) => setLightboxImageUrl(url)}
-                            onLongPress={handleLongPressMessage}
-                            onReactionPress={handleReaction}
-                        />
-                    )}
-                    ListFooterComponent={isTyping ? <TypingIndicatorBubble /> : null}
-                />
+                {loading ? (
+                    <ChatRoomSkeleton />
+                ) : (
+                    <FlatList
+                        ref={flatListRef}
+                        data={messages}
+                        keyExtractor={(item) => item.id}
+                        onScroll={handleScroll}
+                        scrollEventThrottle={16}
+                        contentContainerStyle={styles.messageList}
+                        ListHeaderComponent={
+                            <View style={styles.dateBadge}>
+                                <AppText variant="caption" color={colors.textMuted} weight="600">
+                                    TODAY
+                                </AppText>
+                            </View>
+                        }
+                        renderItem={({ item }) => (
+                            <MessageBubble
+                                message={item}
+                                currentUserId="user_sahil"
+                                onImagePress={(url) => setLightboxImageUrl(url)}
+                                onLongPress={handleLongPressMessage}
+                                onReactionPress={handleReaction}
+                            />
+                        )}
+                        ListFooterComponent={isTyping ? <TypingIndicatorBubble /> : null}
+                    />
+                )}
 
                 {/* Floating Scroll-To-Bottom FAB */}
                 <ScrollToBottomFab visible={showScrollFab} onPress={scrollToBottom} />
@@ -271,6 +300,14 @@ export default function ChatRoomScreen() {
                 visible={!!lightboxImageUrl}
                 imageUrl={lightboxImageUrl}
                 onClose={() => setLightboxImageUrl(null)}
+            />
+
+            {/* ─── 7. PERMISSION PROMPT MODAL ───────────────────────── */}
+            <PermissionPromptModal
+                visible={permissionModalVisible}
+                type={permissionType}
+                onClose={() => setPermissionModalVisible(false)}
+                onAllow={() => {}}
             />
         </Screen>
     );

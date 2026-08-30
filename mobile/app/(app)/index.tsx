@@ -15,10 +15,12 @@ import {
     AppIconButton,
     Avatar,
     Chip,
-    SearchBar,
     EmptyState,
+    ErrorState,
     ConversationRow,
-    ChatActionSheet
+    ChatActionSheet,
+    OfflineBanner,
+    ChatListSkeleton
 } from '../../src/components';
 import { colors, spacing, radius } from '../../src/theme';
 import { mockUsers } from '../../src/mock/users';
@@ -28,29 +30,32 @@ import conversationRepository from '../../src/repositories/ConversationRepositor
 export default function ChatsListScreen() {
     const router = useRouter();
     const [selectedFilter, setSelectedFilter] = useState('All');
-    const [searchQuery, setSearchQuery] = useState('');
     const [conversations, setConversations] = useState<MockConversation[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [hasError, setHasError] = useState(false);
+    const [isOffline, setIsOffline] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [selectedConv, setSelectedConv] = useState<MockConversation | null>(null);
     const [actionSheetVisible, setActionSheetVisible] = useState(false);
 
     const loadConversations = useCallback(async () => {
-        const list = await conversationRepository.getConversations(selectedFilter);
-        if (searchQuery.trim()) {
-            setConversations(
-                list.filter(
-                    (c) =>
-                        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
-                )
-            );
-        } else {
+        try {
+            setHasError(false);
+            const list = await conversationRepository.getConversations(selectedFilter);
             setConversations(list);
+        } catch (e) {
+            setHasError(true);
+        } finally {
+            setLoading(false);
         }
-    }, [selectedFilter, searchQuery]);
+    }, [selectedFilter]);
 
     useEffect(() => {
-        loadConversations();
+        // Initial simulated loading skeleton
+        const timer = setTimeout(() => {
+            loadConversations();
+        }, 400);
+        return () => clearTimeout(timer);
     }, [loadConversations]);
 
     const onRefresh = async () => {
@@ -97,7 +102,13 @@ export default function ChatsListScreen() {
 
     return (
         <Screen style={styles.container}>
-            {/* ─── 1. TOP BRAND HEADER ──────────────────────────────── */}
+            {/* ─── 1. OFFLINE RECONNECTING BANNER ───────────────────── */}
+            <OfflineBanner
+                visible={isOffline}
+                onRetry={() => setIsOffline(false)}
+            />
+
+            {/* ─── 2. TOP BRAND HEADER ──────────────────────────────── */}
             <View style={styles.header}>
                 <View style={styles.headerLeft}>
                     <View style={styles.pulseLogoBadge}>
@@ -107,9 +118,15 @@ export default function ChatsListScreen() {
                         <AppText variant="screenTitle" color={colors.textPrimary} style={styles.brandTitle}>
                             Pulse
                         </AppText>
-                        <AppText variant="caption" color={colors.online} style={styles.onlineBadge}>
-                            ● Connected
-                        </AppText>
+                        <TouchableOpacity onPress={() => setIsOffline(!isOffline)}>
+                            <AppText
+                                variant="caption"
+                                color={isOffline ? colors.warning : colors.online}
+                                style={styles.onlineBadge}
+                            >
+                                {isOffline ? '● Offline (Tap to connect)' : '● Connected'}
+                            </AppText>
+                        </TouchableOpacity>
                     </View>
                 </View>
 
@@ -129,14 +146,13 @@ export default function ChatsListScreen() {
                 </View>
             </View>
 
-            {/* ─── 2. ACTIVE CONTACTS STORY CAROUSEL ────────────────── */}
+            {/* ─── 3. ACTIVE CONTACTS STORY CAROUSEL ────────────────── */}
             <View style={styles.storiesSection}>
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.storiesScroll}
                 >
-                    {/* Add story button */}
                     <TouchableOpacity
                         style={styles.storyItem}
                         activeOpacity={0.7}
@@ -178,7 +194,7 @@ export default function ChatsListScreen() {
                 </ScrollView>
             </View>
 
-            {/* ─── 3. FILTER CHIPS ──────────────────────────────────── */}
+            {/* ─── 4. FILTER CHIPS ──────────────────────────────────── */}
             <View style={styles.filterSection}>
                 <ScrollView
                     horizontal
@@ -196,39 +212,52 @@ export default function ChatsListScreen() {
                 </ScrollView>
             </View>
 
-            {/* ─── 4. CONVERSATION FLATLIST ─────────────────────────── */}
-            <FlatList
-                data={conversations}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                    <ConversationRow
-                        conversation={item}
-                        onPress={handleOpenChat}
-                        onLongPress={handleLongPress}
-                    />
-                )}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={onRefresh}
-                        tintColor={colors.primary}
-                        colors={[colors.primary]}
-                    />
-                }
-                ListEmptyComponent={
-                    <EmptyState
-                        icon="chatbubbles-outline"
-                        title="No Conversations Found"
-                        description={`There are no chats matching the "${selectedFilter}" category filter.`}
-                        actionTitle="Start New Chat"
-                        onAction={() => router.push('/group/create')}
-                        style={styles.emptyState}
-                    />
-                }
-                contentContainerStyle={conversations.length === 0 ? styles.emptyListContent : styles.listContent}
-            />
+            {/* ─── 5. STATE MATRIX: SKELETON / ERROR / FLATLIST ─────── */}
+            {loading ? (
+                <ChatListSkeleton />
+            ) : hasError ? (
+                <ErrorState
+                    title="Failed to Load Chats"
+                    message="Unable to retrieve conversation list. Please check your network."
+                    onRetry={() => {
+                        setLoading(true);
+                        loadConversations();
+                    }}
+                />
+            ) : (
+                <FlatList
+                    data={conversations}
+                    keyExtractor={(item) => item.id}
+                    renderItem={({ item }) => (
+                        <ConversationRow
+                            conversation={item}
+                            onPress={handleOpenChat}
+                            onLongPress={handleLongPress}
+                        />
+                    )}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            tintColor={colors.primary}
+                            colors={[colors.primary]}
+                        />
+                    }
+                    ListEmptyComponent={
+                        <EmptyState
+                            icon="chatbubbles-outline"
+                            title="No Conversations Found"
+                            description={`There are no chats matching the "${selectedFilter}" category filter.`}
+                            actionTitle="Start New Chat"
+                            onAction={() => router.push('/group/create')}
+                            style={styles.emptyState}
+                        />
+                    }
+                    contentContainerStyle={conversations.length === 0 ? styles.emptyListContent : styles.listContent}
+                />
+            )}
 
-            {/* ─── 5. LONG PRESS CHAT ACTION SHEET ─────────────────── */}
+            {/* ─── 6. LONG PRESS CHAT ACTION SHEET ─────────────────── */}
             <ChatActionSheet
                 conversation={selectedConv}
                 visible={actionSheetVisible}
