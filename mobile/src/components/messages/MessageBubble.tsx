@@ -1,21 +1,23 @@
 import React from 'react';
 import { StyleSheet, View, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing } from '../../theme';
-import AppText from '../AppText';
 import TextMessage from './TextMessage';
 import ImageMessage from './ImageMessage';
 import AudioMessage from './AudioMessage';
 import FileMessage from './FileMessage';
 import SystemMessage from './SystemMessage';
+import SwipeableMessageRow from '../animations/SwipeableMessageRow';
+import AnimatedReactionPop from '../animations/AnimatedReactionPop';
+import AppText from '../AppText';
+import { colors, radius, spacing } from '../../theme';
 import { MockMessage } from '../../mock/messages';
 
 export interface MessageBubbleProps {
     message: MockMessage;
     currentUserId: string;
-    onImagePress: (url: string) => void;
-    onLongPress: (message: MockMessage) => void;
-    onReactionPress: (msgId: string, emoji: string) => void;
+    onImagePress?: (imageUrl: string) => void;
+    onLongPress?: (message: MockMessage) => void;
+    onReactionPress?: (messageId: string, emoji: string) => void;
+    onSwipeReply?: (message: MockMessage) => void;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -23,28 +25,18 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     currentUserId,
     onImagePress,
     onLongPress,
-    onReactionPress
+    onReactionPress,
+    onSwipeReply
 }) => {
-    const isOutgoing = message.senderId === currentUserId;
-
-    if (message.type === ('system' as any)) {
+    // 1. System messages render centered with custom styling
+    if (message.type === 'system') {
         return <SystemMessage text={message.text || ''} />;
     }
 
-    const renderDeliveryStatus = (status: MockMessage['status']) => {
-        switch (status) {
-            case 'read':
-                return <Ionicons name="checkmark-done" size={14} color="#FFFFFF" style={{ marginLeft: 3 }} />;
-            case 'delivered':
-                return <Ionicons name="checkmark-done" size={14} color="rgba(255,255,255,0.7)" style={{ marginLeft: 3 }} />;
-            case 'sent':
-                return <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.7)" style={{ marginLeft: 3 }} />;
-            case 'sending':
-                return <Ionicons name="time-outline" size={13} color="rgba(255,255,255,0.7)" style={{ marginLeft: 3 }} />;
-        }
-    };
+    const isOutgoing = message.senderId === currentUserId;
 
-    const renderMessageContent = () => {
+    // 2. Render specific message body based on type
+    const renderContent = () => {
         switch (message.type) {
             case 'image':
                 return (
@@ -52,13 +44,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                         mediaUrl={message.mediaUrl || ''}
                         caption={message.text}
                         isOutgoing={isOutgoing}
-                        onPress={onImagePress}
+                        onPress={onImagePress || (() => {})}
                     />
                 );
             case 'audio':
                 return (
                     <AudioMessage
-                        duration={message.audioDuration || '0:12'}
+                        duration={message.audioDuration}
                         isOutgoing={isOutgoing}
                     />
                 );
@@ -82,154 +74,158 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     };
 
     return (
-        <View
-            style={[
-                styles.rowContainer,
-                isOutgoing ? styles.outgoingRow : styles.incomingRow
-            ]}
+        <SwipeableMessageRow
+            enabled={true}
+            onSwipeReply={onSwipeReply ? () => onSwipeReply(message) : undefined}
         >
-            <TouchableOpacity
-                activeOpacity={0.85}
-                onLongPress={() => onLongPress(message)}
-                delayLongPress={280}
+            <View
                 style={[
-                    styles.bubble,
-                    isOutgoing ? styles.outgoingBubble : styles.incomingBubble
+                    styles.container,
+                    isOutgoing ? styles.containerOutgoing : styles.containerIncoming
                 ]}
             >
-                {/* Quoted Reply */}
-                {message.replyTo && (
-                    <View style={[styles.quotedContainer, isOutgoing && styles.quotedOutgoing]}>
-                        <AppText
-                            variant="caption"
-                            color={isOutgoing ? '#FFFFFF' : colors.primary}
-                            weight="700"
+                <TouchableOpacity
+                    activeOpacity={0.9}
+                    onLongPress={() => onLongPress && onLongPress(message)}
+                    style={styles.touchable}
+                >
+                    {/* Quoted Reply Preview Header */}
+                    {message.replyTo && (
+                        <View
+                            style={[
+                                styles.replyPreview,
+                                isOutgoing ? styles.replyPreviewOutgoing : styles.replyPreviewIncoming
+                            ]}
                         >
-                            {message.replyTo.senderName}
-                        </AppText>
-                        <AppText
-                            variant="caption"
-                            color={isOutgoing ? 'rgba(255,255,255,0.8)' : colors.textSecondary}
-                            numberOfLines={1}
-                        >
-                            {message.replyTo.text}
-                        </AppText>
-                    </View>
-                )}
-
-                {/* Specific Message Type Content */}
-                {renderMessageContent()}
-
-                {/* Footer: Timestamp & Delivery Status */}
-                <View style={styles.footerRow}>
-                    <AppText
-                        variant="caption"
-                        color={isOutgoing ? 'rgba(255,255,255,0.7)' : colors.textMuted}
-                        style={styles.timeText}
-                    >
-                        {message.timestamp}
-                    </AppText>
-                    {isOutgoing && renderDeliveryStatus(message.status)}
-                </View>
-
-                {/* Emoji Reaction Badges */}
-                {message.reactions && message.reactions.length > 0 && (
-                    <View style={styles.reactionsRow}>
-                        {message.reactions.map((r, idx) => (
-                            <TouchableOpacity
-                                key={idx}
-                                style={[
-                                    styles.reactionPill,
-                                    r.userReacted && styles.reactionPillActive
-                                ]}
-                                onPress={() => onReactionPress(message.id, r.emoji)}
-                                activeOpacity={0.7}
-                            >
-                                <AppText style={{ fontSize: 11 }}>{r.emoji}</AppText>
+                            <View style={styles.replyAccent} />
+                            <View style={styles.replyContent}>
                                 <AppText
                                     variant="caption"
-                                    color={colors.textPrimary}
-                                    style={{ marginLeft: 3 }}
+                                    color={isOutgoing ? '#FFFFFF' : colors.primary}
+                                    weight="700"
+                                    numberOfLines={1}
                                 >
-                                    {r.count}
+                                    {message.replyTo.senderName}
                                 </AppText>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
-            </TouchableOpacity>
-        </View>
+                                <AppText
+                                    variant="caption"
+                                    color={isOutgoing ? 'rgba(255, 255, 255, 0.8)' : colors.textSecondary}
+                                    numberOfLines={1}
+                                >
+                                    {message.replyTo.text}
+                                </AppText>
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Main Content Component */}
+                    {renderContent()}
+
+                    {/* Emoji Reactions List */}
+                    {message.reactions && message.reactions.length > 0 && (
+                        <View
+                            style={[
+                                styles.reactionsContainer,
+                                isOutgoing ? styles.reactionsOutgoing : styles.reactionsIncoming
+                            ]}
+                        >
+                            {message.reactions.map((r, i) => (
+                                <AnimatedReactionPop key={`${r.emoji}-${i}`}>
+                                    <TouchableOpacity
+                                        activeOpacity={0.7}
+                                        onPress={() => onReactionPress && onReactionPress(message.id, r.emoji)}
+                                        style={styles.reactionPill}
+                                    >
+                                        <AppText style={styles.reactionEmoji}>{r.emoji}</AppText>
+                                        {r.count > 1 && (
+                                            <AppText variant="caption" color={colors.textSecondary} style={styles.reactionCount}>
+                                                {r.count}
+                                            </AppText>
+                                        )}
+                                    </TouchableOpacity>
+                                </AnimatedReactionPop>
+                            ))}
+                        </View>
+                    )}
+                </TouchableOpacity>
+            </View>
+        </SwipeableMessageRow>
     );
 };
 
 const styles = StyleSheet.create({
-    rowContainer: {
-        marginVertical: 4,
-        flexDirection: 'row',
-        paddingHorizontal: spacing.md
+    container: {
+        width: '100%',
+        paddingHorizontal: spacing.md,
+        marginVertical: 3,
+        flexDirection: 'row'
     },
-    incomingRow: {
-        justifyContent: 'flex-start'
-    },
-    outgoingRow: {
+    containerOutgoing: {
         justifyContent: 'flex-end'
     },
-    bubble: {
+    containerIncoming: {
+        justifyContent: 'flex-start'
+    },
+    touchable: {
         maxWidth: '82%',
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.lg
+        position: 'relative'
     },
-    incomingBubble: {
-        backgroundColor: colors.messageIncoming,
-        borderBottomLeftRadius: 4,
-        borderWidth: 1,
-        borderColor: colors.border
-    },
-    outgoingBubble: {
-        backgroundColor: colors.messageOutgoing,
-        borderBottomRightRadius: 4
-    },
-    quotedContainer: {
-        backgroundColor: 'rgba(0,0,0,0.2)',
-        borderLeftWidth: 3,
-        borderLeftColor: colors.primary,
-        paddingHorizontal: spacing.xs + 2,
-        paddingVertical: 3,
-        borderRadius: 4,
-        marginBottom: spacing.xs
-    },
-    quotedOutgoing: {
-        borderLeftColor: '#FFFFFF',
-        backgroundColor: 'rgba(255,255,255,0.15)'
-    },
-    footerRow: {
+    replyPreview: {
         flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        marginTop: 4
+        padding: spacing.xs + 2,
+        borderRadius: radius.sm,
+        marginBottom: 4
     },
-    timeText: {
-        fontSize: 10
+    replyPreviewOutgoing: {
+        backgroundColor: 'rgba(0, 0, 0, 0.15)'
     },
-    reactionsRow: {
+    replyPreviewIncoming: {
+        backgroundColor: colors.surfaceElevated
+    },
+    replyAccent: {
+        width: 3,
+        backgroundColor: colors.primary,
+        borderRadius: radius.full,
+        marginRight: spacing.xs + 2
+    },
+    replyContent: {
+        flex: 1
+    },
+    reactionsContainer: {
         flexDirection: 'row',
-        marginTop: 4,
+        position: 'absolute',
+        bottom: -10,
+        zIndex: 10,
         gap: 4
+    },
+    reactionsOutgoing: {
+        right: 8
+    },
+    reactionsIncoming: {
+        left: 8
     },
     reactionPill: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.surfaceElevated,
+        backgroundColor: colors.surface,
+        borderRadius: radius.full,
         paddingHorizontal: 6,
         paddingVertical: 2,
-        borderRadius: radius.full,
         borderWidth: 1,
-        borderColor: colors.border
+        borderColor: colors.border,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2
     },
-    reactionPillActive: {
-        borderColor: colors.primary,
-        backgroundColor: colors.primarySubtle
+    reactionEmoji: {
+        fontSize: 12
+    },
+    reactionCount: {
+        fontSize: 10,
+        marginLeft: 3,
+        fontWeight: '600'
     }
 });
 

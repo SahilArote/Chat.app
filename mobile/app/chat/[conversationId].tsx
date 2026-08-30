@@ -257,6 +257,7 @@ export default function ChatRoomScreen() {
                                 onImagePress={(url) => setLightboxImageUrl(url)}
                                 onLongPress={handleLongPressMessage}
                                 onReactionPress={handleReaction}
+                                onSwipeReply={handleReplyMessage}
                             />
                         )}
                         ListFooterComponent={isTyping ? <TypingIndicatorBubble /> : null}

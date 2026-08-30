@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import {
-    View,
     StyleSheet,
+    View,
     TextInput,
-    TouchableOpacity
+    TouchableOpacity,
+    Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing } from '../theme';
 import AppText from './AppText';
-import AppIconButton from './AppIconButton';
+import AnimatedSendButton from './animations/AnimatedSendButton';
+import { colors, radius, spacing } from '../theme';
 import { MockMessageReply } from '../mock/messages';
 
 export interface MessageComposerProps {
@@ -28,27 +29,22 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
     const [isRecording, setIsRecording] = useState(false);
 
     const handleSend = () => {
-        if (!text.trim()) return;
+        if (!text.trim()) {
+            // Voice mic trigger toggle
+            setIsRecording(!isRecording);
+            return;
+        }
         onSendMessage(text.trim());
         setText('');
     };
 
-    const handleToggleRecording = () => {
-        if (!isRecording) {
-            setIsRecording(true);
-        } else {
-            setIsRecording(false);
-            onSendMessage('🎤 Voice Message (0:08)');
-        }
-    };
-
     return (
         <View style={styles.container}>
-            {/* ─── 1. ACTIVE REPLY BANNER ──────────────────────────── */}
+            {/* ─── 1. QUOTED REPLY BANNER ───────────────────────────── */}
             {replyTo && (
                 <View style={styles.replyBanner}>
-                    <View style={styles.replyBarAccent} />
-                    <View style={styles.replyContent}>
+                    <View style={styles.replyBar} />
+                    <View style={styles.replyInfo}>
                         <AppText variant="caption" color={colors.primary} weight="700">
                             Replying to {replyTo.senderName}
                         </AppText>
@@ -59,72 +55,57 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
                     <TouchableOpacity
                         onPress={onCancelReply}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        style={styles.cancelReply}
+                        style={styles.closeReplyBtn}
                     >
-                        <Ionicons name="close" size={16} color={colors.textSecondary} />
+                        <Ionicons name="close" size={16} color={colors.textMuted} />
                     </TouchableOpacity>
                 </View>
             )}
 
-            {/* ─── 2. INPUT BAR / VOICE RECORDING ──────────────────── */}
-            {isRecording ? (
-                <View style={styles.recordingRow}>
-                    <View style={styles.recordingDot} />
-                    <AppText variant="bodySmall" color={colors.error} weight="600" style={styles.recText}>
-                        Recording Audio... (0:05)
-                    </AppText>
-                    <TouchableOpacity
-                        style={styles.cancelRecBtn}
-                        onPress={() => setIsRecording(false)}
-                    >
-                        <AppText variant="caption" color={colors.textSecondary}>
-                            Cancel
-                        </AppText>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.stopRecBtn}
-                        onPress={handleToggleRecording}
-                    >
-                        <Ionicons name="send" size={16} color="#FFFFFF" />
-                    </TouchableOpacity>
-                </View>
-            ) : (
-                <View style={styles.inputRow}>
-                    {/* Attachment Clip Button */}
-                    <AppIconButton
-                        icon={<Ionicons name="attach" size={22} color={colors.textSecondary} />}
-                        onPress={onOpenAttachments}
-                        style={styles.attachBtn}
-                    />
+            {/* ─── 2. INPUT & ACTIONS ROW ───────────────────────────── */}
+            <View style={styles.inputRow}>
+                {/* Attachment Clip Button */}
+                <TouchableOpacity
+                    style={styles.iconBtn}
+                    activeOpacity={0.7}
+                    onPress={onOpenAttachments}
+                >
+                    <Ionicons name="add" size={24} color={colors.textPrimary} />
+                </TouchableOpacity>
 
-                    {/* Text Field */}
-                    <TextInput
-                        style={styles.textInput}
-                        placeholder="Type a message..."
-                        placeholderTextColor={colors.textMuted}
-                        value={text}
-                        onChangeText={setText}
-                        multiline
-                    />
-
-                    {/* Send or Voice Record Button */}
-                    {text.trim().length > 0 ? (
-                        <TouchableOpacity
-                            style={styles.sendButton}
-                            activeOpacity={0.8}
-                            onPress={handleSend}
-                        >
-                            <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
-                        </TouchableOpacity>
+                {/* Main Text Input Field */}
+                <View style={styles.inputWrapper}>
+                    {isRecording ? (
+                        <View style={styles.recordingRow}>
+                            <View style={styles.recordingDot} />
+                            <AppText variant="bodySmall" color={colors.error} weight="600">
+                                0:04 • Recording Voice Note...
+                            </AppText>
+                        </View>
                     ) : (
-                        <AppIconButton
-                            icon={<Ionicons name="mic-outline" size={22} color={colors.textSecondary} />}
-                            onPress={handleToggleRecording}
-                            style={styles.micBtn}
+                        <TextInput
+                            style={styles.textInput}
+                            placeholder="Message Pulse..."
+                            placeholderTextColor={colors.textMuted}
+                            value={text}
+                            onChangeText={setText}
+                            multiline
+                            maxLength={1000}
                         />
                     )}
+
+                    {/* Quick Emoji Trigger */}
+                    <TouchableOpacity style={styles.inputEmojiBtn} activeOpacity={0.7}>
+                        <Ionicons name="happy-outline" size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
                 </View>
-            )}
+
+                {/* Animated Send / Mic Button */}
+                <AnimatedSendButton
+                    hasText={text.trim().length > 0}
+                    onPress={handleSend}
+                />
+            </View>
         </View>
     );
 };
@@ -133,89 +114,77 @@ const styles = StyleSheet.create({
     container: {
         backgroundColor: colors.surface,
         borderTopWidth: 1,
-        borderTopColor: colors.border
+        borderTopColor: colors.border,
+        paddingHorizontal: spacing.md,
+        paddingTop: spacing.xs,
+        paddingBottom: Platform.OS === 'ios' ? spacing.lg : spacing.sm
     },
     replyBanner: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: colors.surfaceElevated,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.xs + 2,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border
+        borderRadius: radius.md,
+        padding: spacing.xs + 2,
+        marginBottom: spacing.xs
     },
-    replyBarAccent: {
+    replyBar: {
         width: 3,
         height: '100%',
         backgroundColor: colors.primary,
         borderRadius: radius.full,
         marginRight: spacing.sm
     },
-    replyContent: {
+    replyInfo: {
         flex: 1
     },
-    cancelReply: {
+    closeReplyBtn: {
         padding: spacing.xs
     },
     inputRow: {
         flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.sm
+        alignItems: 'center'
     },
-    attachBtn: {
+    iconBtn: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: spacing.xs
+    },
+    inputWrapper: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.surfaceElevated,
+        borderRadius: radius.full,
+        paddingHorizontal: spacing.md,
+        minHeight: 40,
+        maxHeight: 100,
+        borderWidth: 1,
+        borderColor: colors.border,
         marginRight: spacing.xs
     },
     textInput: {
         flex: 1,
-        backgroundColor: colors.background,
-        borderRadius: radius.full,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.xs + 2,
-        maxHeight: 110,
         color: colors.textPrimary,
-        fontSize: 15,
-        borderWidth: 1,
-        borderColor: colors.border
-    },
-    sendButton: {
-        width: 38,
-        height: 38,
-        borderRadius: radius.full,
-        backgroundColor: colors.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginLeft: spacing.xs
-    },
-    micBtn: {
-        marginLeft: spacing.xs
+        fontSize: 14,
+        paddingVertical: spacing.xs
     },
     recordingRow: {
+        flex: 1,
         flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.md
+        alignItems: 'center'
     },
     recordingDot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
         backgroundColor: colors.error,
         marginRight: spacing.sm
     },
-    recText: {
-        flex: 1
-    },
-    cancelRecBtn: {
-        paddingHorizontal: spacing.md
-    },
-    stopRecBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: radius.full,
-        backgroundColor: colors.primary,
-        alignItems: 'center',
-        justifyContent: 'center'
+    inputEmojiBtn: {
+        padding: 4
     }
 });
 

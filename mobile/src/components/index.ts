@@ -30,3 +30,4 @@ export * from './profile';
 export * from './search';
 export * from './calls';
 export * from './states';
+export * from './animations';
